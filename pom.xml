@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <groupId>org.sonatype.oss</groupId>
+        <artifactId>oss-parent</artifactId>
+        <version>7</version>
+        <relativePath />
+    </parent>
+
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>edu.usc</groupId>
+    <artifactId>penncnv-seq</artifactId>
+    <version>0.1</version>
+    <packaging>jar</packaging>
+
+    <name>cnv-caller</name>
+    <description>A CNV caller based on sequence reads.</description>
+    <properties>
+        <java.version>1.7.0_13</java.version>
+        <htsjdk.version>1.118</htsjdk.version>
+        <!-- CHANGE THIS FOR A DIFFERENT VERSION OF HADOOP -->
+        <hadoop.version>2.6.0</hadoop.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+    <build>
+      <outputDirectory>target/classes</outputDirectory>
+      <plugins>
+        <plugin>
+          <!-- Build an executable JAR -->
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-jar-plugin</artifactId>
+          <version>2.4</version>
+          <configuration>
+            <archive>
+              <manifest>
+                <addClasspath>true</addClasspath>
+                <classpathPrefix>lib/</classpathPrefix>
+                <!--mainClass>edu.usc.Hmm</mainClass-->
+                <mainClass>edu.usc.PennCnvSeq</mainClass>
+              </manifest>
+            </archive>
+          </configuration>
+        </plugin>
+      </plugins>
+    </build>
+    <dependencies>
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-client</artifactId>
+            <version>${hadoop.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.seqdoop</groupId>
+            <artifactId>hadoop-bam</artifactId>
+            <version>7.0.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.seqdoop</groupId>
+            <artifactId>htsjdk</artifactId>
+            <version>1.118</version>
+        </dependency>
+    </dependencies>
+
+</project>
