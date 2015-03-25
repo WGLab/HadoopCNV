@@ -1,10 +1,17 @@
 package edu.usc;
 
 import java.io.IOException;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Iterator;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.HashMap;
 import java.util.NoSuchElementException;
 import java.util.List;
 import java.util.Vector;
@@ -16,7 +23,7 @@ public class Hmm{
   private String refName;
   private final int states = 4;
   private int markers;
-  private long [] ranges;
+  private int [] ranges;
   private float [] data;
   private float [] lrr_mat;
   private float [] baf_mat;
@@ -251,8 +258,8 @@ public class Hmm{
  */
   public void init(String refName, Iterator<Text> it_text){
     this.refName = refName;
-    Vector<Long> start = new Vector<Long>();
-    Vector<Long> end = new Vector<Long>();
+    Vector<Integer> start = new Vector<Integer>();
+    Vector<Integer> end = new Vector<Integer>();
     Vector<Float> depth = new Vector<Float>();
     Vector<Float> baf = new Vector<Float>();
     int sites = 0;
@@ -263,8 +270,8 @@ public class Hmm{
       String reduceValue = it_text.next().toString();
       //System.err.println("CNV REDUCER VALUE: "+reduceValue);
       String [] parts = reduceValue.split("\t");
-      start.add(Long.decode(parts[0]));
-      end.add(Long.decode(parts[1]));
+      start.add(Integer.decode(parts[0]));
+      end.add(Integer.decode(parts[1]));
       depth.add(Float.valueOf(parts[2]));
       int bac = Integer.valueOf(parts[3]); 
       mean_coverage+=(Float.valueOf(parts[4]));
@@ -279,7 +286,7 @@ public class Hmm{
     this.markers = start.size();
     //System.err.println("TOTAL MARKERS: "+markers);
     System.err.println("Chr "+refName+" mean coverage of "+markers+" markers is "+mean_coverage);
-    ranges = new long[markers*2];
+    ranges = new int[markers*2];
     data = new float[markers*2];
     for(int i=0;i<markers;++i){
       ranges[i*2] = start.get(i);
@@ -290,7 +297,7 @@ public class Hmm{
     init_matrices();
   }
 
-  public void init(String refName,long[] ranges,float [] data, float mean_coverage){
+  public void init(String refName,int[] ranges,float [] data, float mean_coverage){
     this.mean_coverage = mean_coverage;
     this.refName = refName;
     this.ranges = ranges;
@@ -305,7 +312,7 @@ public class Hmm{
       int markers = lines.size();
       System.err.println("There are "+lines.size()+" lines in "+filename);
       Hmm hmm = new Hmm(markers);
-      long[] ranges = new long[markers*2];
+      int[] ranges = new int[markers*2];
       float[] data = new float[markers*2];
       Iterator<String> lines_it = lines.iterator();
       int marker=0;
@@ -318,8 +325,8 @@ public class Hmm{
         int partindex = 0;
         refName = parts[partindex++];
         ++partindex;
-        ranges[marker*2] = Long.parseLong(parts[partindex++]);
-        ranges[marker*2+1] = Long.parseLong(parts[partindex++]);
+        ranges[marker*2] = Integer.parseInt(parts[partindex++]);
+        ranges[marker*2+1] = Integer.parseInt(parts[partindex++]);
         data[marker*2] = Float.parseFloat(parts[partindex++]);
         int bac = Integer.parseInt(parts[partindex++]);
         float totalDepth = Float.parseFloat(parts[partindex++]);
@@ -356,7 +363,7 @@ public class Hmm{
     @Override
     public String next(){ 
       if (marker>=markers) throw new NoSuchElementException();
-      String res = Long.toString(ranges[marker*2])+"\t"+Long.toString(ranges[marker*2+1])+"\t"+Float.toString(scaled_depth[marker])+"\t"+Integer.toString(cn_arr[best_state[marker]])+"\t" + Integer.toString(best_state[marker]);
+      String res = Integer.toString(ranges[marker*2])+"\t"+Integer.toString(ranges[marker*2+1])+"\t"+Float.toString(scaled_depth[marker])+"\t"+Integer.toString(cn_arr[best_state[marker]])+"\t" + Integer.toString(best_state[marker]);
       ++marker;
       return res;
     }
