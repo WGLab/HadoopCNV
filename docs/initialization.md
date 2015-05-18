@@ -47,7 +47,7 @@ hdfs dfs -mkdir /user
 Then for each username (which matches the unix username), apply the command:
 
 ```
-hdfs dfs -mkdir/<username>
+hdfs dfs -mkdir /user/<username>
 ```
 
 Make sure that new directory is writable by the user:
