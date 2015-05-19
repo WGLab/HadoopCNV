@@ -37,7 +37,7 @@
                 <classpathPrefix>lib/</classpathPrefix>
                 <!--mainClass>edu.usc.VcfLookup</mainClass-->
                 <!--mainClass>edu.usc.Hmm</mainClass-->
-                <mainClass>edu.usc.PennCnvSeq</mainClass>
+                <!--mainClass>edu.usc.PennCnvSeq</mainClass-->
               </manifest>
             </archive>
           </configuration>

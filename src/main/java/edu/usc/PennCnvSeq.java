@@ -55,20 +55,31 @@ public class PennCnvSeq
 extends Configured
 implements Tool{
 
+  UserConfig userConfig;
   Configuration conf;
   Path bamfile,vcffile;
   String bamfileStr,vcffileStr;
-  public static final int base_spacing = 1;
-  public static final int bin_length = 1000;
+  static int bin_length;
   
-  public PennCnvSeq(){}
+  public PennCnvSeq(){
+  }
 
   @Override
   public int run(String args[]){
     for(int i=0;i<args.length;++i) System.err.println("Argument "+i+": "+args[i]);
     this.conf = super.getConf();
-    this.bamfileStr = args[0];
-    this.vcffileStr = args[1];
+    FileSystem fileSystem = null;
+    this.userConfig = new UserConfig();
+    try{
+      userConfig.init(args[0]);
+    }catch (IOException ex){
+       System.err.println("Cannot open configuration file "+args[0]);
+       ex.printStackTrace(System.err);
+       System.exit(1);
+    }
+    this.bamfileStr = userConfig.getBamFile();
+    this.vcffileStr = userConfig.getVcfFile();
+    this.bin_length = userConfig.getBinWidth();
     this.bamfile = new Path(bamfileStr);
     this.vcffile = new Path(vcffileStr);
     System.err.println("Bamfile is at "+bamfile);
@@ -79,15 +90,16 @@ implements Tool{
     try{
       int numReduceTasksBig = 800;
       int numReduceTasksSmall = 100;
-      boolean runVcfLookup = false;
-      boolean runDepthCallJob =  true;
-      boolean runRegionBinJob = false;
-      boolean runCnvCallJob = false;
+      boolean runVcfLookup = true;
+      boolean runDepthCallJob = true;
+      boolean runRegionBinJob = true;
+      boolean runCnvCallJob = true;
       boolean runGlobalSortJob = false;
+      fileSystem = FileSystem.get(conf);
       if(runVcfLookup){
         VcfLookup lookup = new VcfLookup();
         lookup.parseVcf(vcffileStr);
-        lookup.readObject();
+        //lookup.readObject();
       }
       if(runDepthCallJob){
         //conf.setInt("dfs.blocksize",512*1024*1024);
@@ -119,7 +131,7 @@ implements Tool{
         depthCallJob.setJarByClass(PennCnvSeq.class);
         depthCallJob.setMapperClass(SAMRecordMapper.class);
         depthCallJob.setMapOutputKeyClass(RefPosBaseKey.class);
-        //depthCallJob.setMapOutputKeyClass(IntWritable.class);
+        //depthCallJob.setMapOutputKeyClass(LongWritable.class);
         depthCallJob.setMapOutputValueClass(DoubleWritable.class);
         depthCallJob.setCombinerClass(AlleleDepthReducer.class);
         depthCallJob.setReducerClass(AlleleDepthReducer.class);
@@ -128,6 +140,7 @@ implements Tool{
         depthCallJob.setOutputValueClass (DoubleWritable.class);
         //FileInputFormat.setInputPathFilter(depthCallJob,GlobFilter.class);
         FileInputFormat.addInputPath(depthCallJob,bamfile);
+        fileSystem.delete(new Path("workdir/depth"),true);
         FileOutputFormat.setOutputPath(depthCallJob,new Path("workdir/depth"));
         System.err.println("DEPTH CALL JOB submitting.");
         if (!depthCallJob.waitForCompletion(true)) {
@@ -149,7 +162,8 @@ implements Tool{
         regionBinJob.setOutputValueClass (Text.class);
   
         FileInputFormat.addInputPath(regionBinJob,new Path("workdir/depth/"));
-        FileOutputFormat.setOutputPath(regionBinJob,new Path("workdir/bins/"));
+        fileSystem.delete(new Path("workdir/bins"),true);
+        FileOutputFormat.setOutputPath(regionBinJob,new Path("workdir/bins"));
         System.err.println("REGION BIN JOB submitting.");
         if (!regionBinJob.waitForCompletion(true)) {
           System.err.println("REGION BIN JOB failed.");
@@ -174,7 +188,8 @@ implements Tool{
         //secondarySortJob.setOutputKeyClass(RefBinKey.class);
         secondarySortJob.setOutputValueClass (Text.class);
         FileInputFormat.addInputPath(secondarySortJob,new Path("workdir/bins/"));
-        FileOutputFormat.setOutputPath(secondarySortJob,new Path("workdir/cnv/"));
+        fileSystem.delete(new Path("workdir/cnv"),true);
+        FileOutputFormat.setOutputPath(secondarySortJob,new Path("workdir/cnv"));
         System.err.println("SECONDARY SORT JOB submitting.");
         if (!secondarySortJob.waitForCompletion(true)) {
           System.err.println("SECONDARY SORT JOB failed.");
@@ -238,516 +253,18 @@ implements Tool{
       ex.printStackTrace();
       System.exit(1);
     }
-    
   }
 }
 
-class SAMRecordMapper
-extends Mapper<LongWritable,SAMRecordWritable,
-               RefPosBaseKey,DoubleWritable> {
-
-  VcfLookup lookup = null;
-  public SAMRecordMapper(){
-    lookup = new VcfLookup();
-    lookup.readObject();
+class ChrGroupingComparator extends WritableComparator{
+  protected ChrGroupingComparator(){
+    super(RefBinKey.class,true);
   }
-
-  @Override protected void map(LongWritable inkey,SAMRecordWritable inval,
-                               Mapper<LongWritable,SAMRecordWritable,
-                               RefPosBaseKey,DoubleWritable>.Context ctx)
-    throws InterruptedException, IOException{
-      SAMRecord samrecord = inval.get();    
-      String refname = samrecord.getReferenceName();
-      //String samstr = samrecord.getSAMString();
-      //System.err.println("SAMSTRING: "+samstr);
-      //System.err.println(" readlen: "+samrecord.getReadLength());
-      byte[] bases = samrecord.getReadBases();
-      byte[] basequals = samrecord.getBaseQualities();
-      int mapqual = samrecord.getMappingQuality();
-      double mapprob = 1.-Math.pow(10,-mapqual*.1);
-      //System.err.println(" mapquality "+mapprob);
-      //System.err.println(" bytelen: "+bases.length);
-      //System.err.println(" first base: "+Byte.toString(bases[0]));
-      //System.err.println(" cigar: "+samrecord.getCigar().toString());
-      //System.err.println(" quality: "+samrecord.getMappingQuality());
-      List<AlignmentBlock> alignmentBlockList = samrecord.getAlignmentBlocks();
-      Iterator<AlignmentBlock> it = alignmentBlockList.iterator();
-      while(it.hasNext()){
-        AlignmentBlock alignmentBlock = it.next();
-        //System.err.println("  block start "+alignmentBlock.getReferenceStart()+"("+alignmentBlock.getReadStart()+") with length "+alignmentBlock.getLength());
-        int refstart = alignmentBlock.getReferenceStart();
-        int readstart = alignmentBlock.getReadStart();
-        int alignlen = alignmentBlock.getLength();
-        //char []basechars = new char[alignlen];
-        for(int i=0;i<alignlen;++i){
-          int refpos = refstart + i;
-          if(lookup.exists(refname,refpos)){
-          // Let's break up the string into chunks of 10
-          //if(refpos % PennCnvSeq.base_spacing == 0){
-            int base = (int)bases[readstart+i-1];
-            //basechars[i] = (char)base;
-            int basequal = (int)basequals[readstart+i-1];
-            double baseprob = 1.-Math.pow(10,-basequal*.1);
-            //System.err.println(" base "+base+" quality: "+(1.-Math.pow(10,-basequal*.1)));
-            double fullprob = mapprob;
-            //double fullprob = mapprob*baseprob;
-            if(fullprob>.99) {
-              ctx.write(new RefPosBaseKey(refname,refstart+i,base),new DoubleWritable(fullprob));  
-            }
-          }
-        }
-      }
-    }
-}
-
-
-
-class AlleleDepthReducer
-extends Reducer<RefPosBaseKey,DoubleWritable,
-               RefPosBaseKey,DoubleWritable> {
-  @Override protected void reduce(RefPosBaseKey inkey,Iterable<DoubleWritable> invals,
-                               Reducer<RefPosBaseKey,DoubleWritable,
-                               RefPosBaseKey,DoubleWritable>.Context ctx)
-    throws InterruptedException, IOException{
-      Iterator<DoubleWritable> it = invals.iterator();
-      double sum = 0.;
-      while(it.hasNext()){
-        sum+= it.next().get();
-      }      
-      if(sum>=1.0) ctx.write(inkey,new DoubleWritable(sum));  
-      //System.err.println("REDUCER: "+inkey.toString()+": "+sum);
-    }
-}
-
-class BinSortMapper
-extends Mapper<IntWritable,Text,
-               RefBinKey,Text> {
-  private final Text newVal = new Text();
-  @Override protected void map(IntWritable inkey,Text inval,
-                               Mapper<IntWritable,Text,
-                               RefBinKey,Text>.Context ctx)
-    throws InterruptedException, IOException{
-      String []parts = inval.toString().split("\t");
-      String refname = parts[0];
-      int bin = Integer.parseInt(parts[1]);
-      String value = StringUtils.join(parts,"\t",2,parts.length);
-      //System.err.println("BinMap value: "+binMapValue);
-      newVal.set(value);
-      ctx.write(new RefBinKey(refname,bin),newVal);  
-     
-    }
-}
-
-class CnvReducer
-extends Reducer<RefBinKey,Text,
-               Text,Text> {
-  private final Text outKey = new Text();
-  private final Text textRes = new Text();
-  @Override 
-  protected void reduce(RefBinKey inkey,Iterable<Text> invals,
-  Reducer<RefBinKey,Text, Text,Text>.Context ctx)
-  throws InterruptedException, IOException{
-    Iterator<Text> it_text = invals.iterator();
-    if (it_text.hasNext()){
-      Hmm hmm = new Hmm();
-      hmm.init(inkey.getRefName(),it_text);
-      hmm.run();
-      Iterator<String> it_res = hmm.getResults();
-      outKey.set(inkey.getRefName());
-      while(it_res.hasNext()){
-        textRes.set(it_res.next());
-        ctx.write(outKey,textRes);
-      }
-    }
-    //Map<Integer,List<Float> > binMap = new HashMap();
-  }
-}
-
-class BinMapper
-extends Mapper<IntWritable,Text,
-               RefBinKey,Text> {
-  private final RefBinKey refBinKey = new RefBinKey();
-  private final Text newVal = new Text();
-  @Override protected void map(IntWritable inkey,Text inval,
-                               Mapper<IntWritable,Text,
-                               RefBinKey,Text>.Context ctx)
-    throws InterruptedException, IOException{
-      String []parts = inval.toString().split("\t");
-      String refname = parts[0];
-      int bin = (int)(Integer.parseInt(parts[1])/PennCnvSeq.bin_length);
-      String binMapValue = StringUtils.join(parts,"\t",1,4);
-      //System.err.println("BinMap value: "+binMapValue);
-      refBinKey.setRefName(refname);
-      refBinKey.setBin(bin);
-      newVal.set(binMapValue);
-      ctx.write(refBinKey,newVal);  
-     
-    }
-}
-
-class BinReducer
-extends Reducer<RefBinKey,Text,
-               RefBinKey,Text> {
-
-  private final Text retText = new Text();
-  private final Map<Integer,List<Float> > binMap = new HashMap();
-  private final Set<Float> depthSet = new TreeSet();
-  private final Set<Float> bafSet = new TreeSet();
-
-  @Override 
-  protected void reduce(RefBinKey inkey,Iterable<Text> invals,
-  Reducer<RefBinKey,Text, RefBinKey,Text>.Context ctx)
-  throws InterruptedException, IOException{
-    Iterator<Text> it = invals.iterator();
-    binMap.clear();
-    int startbp = Integer.MAX_VALUE;
-    int endbp = Integer.MIN_VALUE;
-    while(it.hasNext()){
-      Text text = it.next();
-      String[] parts = text.toString().split("\t");
-      int p=0;
-      Integer bp = Integer.decode(parts[p++]);
-      if(bp>endbp)endbp = bp;
-      if(bp<startbp)startbp = bp;
-      int allele = Integer.parseInt(parts[p++]);
-      Float depth = Float.valueOf(parts[p++]);
-      if (binMap.get(bp)==null){
-        binMap.put(bp,new java.util.ArrayList());
-      }
-      binMap.get(bp).add(depth);
-      //System.err.println("BIN REDUCER: "+inkey.toString()+" : "+bp+" : "+depth);
-    }
-    Iterator<Integer> it_keys = binMap.keySet().iterator();
-    depthSet.clear();
-    bafSet.clear();
-    double total_depth = 0;
-    int n=0;
-    int hets = 0;
-    while(it_keys.hasNext()){
-      Integer bp = it_keys.next();
-      Iterator<Float> depthListIterator = binMap.get(bp).iterator();
-      float maxDepth = 0,pos_depth=0;
-      while(depthListIterator.hasNext()){
-        float depth = depthListIterator.next().floatValue();
-        pos_depth+=depth;
-        if(depth>maxDepth) maxDepth = depth;
-      }
-      float baf = (pos_depth-maxDepth)/pos_depth;
-      //if(pos_depth<20 || baf<0.1) baf = 0f;
-      if(baf > 0f) ++hets;
-      //System.err.println("BIN REDUCER adding at "+bp+" : "+pos_depth+","+baf);
-      depthSet.add(pos_depth);
-      total_depth+=pos_depth;
-      ++n;
-      bafSet.add(baf);
-    }
-    double mean_depth=total_depth/n;
-    Iterator<Float> depthSetIt = depthSet.iterator();
-    Iterator<Float> bafSetIt = bafSet.iterator();
-    float medianDepth = 0;
-    float medianBaf = 0;
-    for(int i=0;i<depthSet.size()/2;++i){
-      medianDepth = depthSetIt.next();
-    }
-    for(int i=0;i<bafSet.size()/2;++i){
-      medianBaf = bafSetIt.next();
-    }
-    //System.err.println("BIN REDUCER: depthsetsize: "+depthSet.size()+" bafsetsize: "+bafSet.size()+" median depth: "+medianDepth+" median baf: "+medianBaf);
-    // for median depth
-    retText.set(Integer.toString(startbp)+"\t"+Integer.toString(endbp)+"\t"+Double.toString(medianDepth)+"\t"+Integer.toString(hets)+"\t"+Double.toString(total_depth)+"\t"+Integer.toString(n));
-    ctx.write(inkey, retText);
-  }
-}
-
-/*
- *  KEY CLASSES BEGIN HERE
- *
- */
-
-class RefRangeAlignmentKey implements
-WritableComparable<RefRangeAlignmentKey>{
-
-  private String refname;
-  private int position1;
-  private int position2;
-  private String bases;
-
-  public RefRangeAlignmentKey(){}
-
-  public RefRangeAlignmentKey(String refname,int position1,int position2, String bases){
-    this.refname = refname;
-    this.position1 = position1;
-    this.position2 = position2;
-    this.bases = bases;
-  }
-
-  public void setRefName(String refname){
-    this.refname = refname;
-  }
-  
-  public void setPosition1(int position1){
-    this.position1 = position1;
-  }
-
-  public void setPosition2(int position2){
-    this.position2 = position2;
-  }
-
-  public void setBase(String bases){
-    this.bases = bases;
-  }
-
-  public void write(DataOutput out) throws IOException {
-    out.writeUTF(refname);
-    out.writeInt(position1);
-    out.writeInt(position2);
-    out.writeUTF(bases);
-  }
-
-  public void readFields(DataInput in) throws IOException {
-    refname = in.readUTF();
-    position1 = in.readInt();
-    position2 = in.readInt();
-    bases = in.readUTF();
-  }
-
-  public int compareTo(RefRangeAlignmentKey other) {
-    int cmp = refname.compareTo(other.refname);
-    if(cmp!=0) return cmp;
-
-    if (this.position1<other.position1) return -1;
-    else if (this.position1>other.position1) return 1;
-    else if (this.position2<other.position2) return -1;
-    else if (this.position2>other.position2) return 1;
-    else return bases.compareTo(other.bases);
-  }
-
-  @Override public String toString(){
-    return refname+"\t"+Integer.toString(position1)+"\t"+Integer.toString(position2)+"\t"+bases;
-  }
-
-  @Override public int hashCode(){
-    final int prime = 31;
-    int result = 1;
-    result = prime * result + ((refname==null) ? 0 : refname.hashCode());
-    result = prime * result + (int)(position1 ^ (position1 >>> 32));
-    result = prime * result + (int)(position2 ^ (position2 >>> 32));
-    result = prime * result + ((bases==null) ? 0 : bases.hashCode());
-    return result;
-  }
-}
-
-class RefPosBaseKey implements
-WritableComparable<RefPosBaseKey>{
-
-  private String refname;
-  private int position;
-  private int base;
-
-  public RefPosBaseKey(){}
-  public RefPosBaseKey(String refname,int position, int base){
-    this.refname = refname;
-    this.position = position;
-    this.base = base;
-  }
-
-  public void setRefName(String refname){
-    this.refname = refname;
-  }
-  
-  public void setPosition(int position){
-    this.position = position;
-  }
-
-  public void setBase(int base){
-    this.base = base;
-  }
-
-  public void write(DataOutput out) throws IOException {
-    out.writeUTF(refname);
-    out.writeInt(position);
-    out.writeInt(base);
-  }
-
-  public void readFields(DataInput in) throws IOException {
-    refname = in.readUTF();
-    position = in.readInt();
-    base = in.readInt();
-  }
-
-  public int compareTo(RefPosBaseKey other) {
-    int cmp = refname.compareTo(other.refname);
-    if(cmp!=0) return cmp;
-
-    if (this.position<other.position) return -1;
-    else if (this.position>other.position) return 1;
-    else if (this.base<other.base) return -1;
-    else if (this.base>other.base) return 1;
-    else return 0;
-  }
-
-  @Override public String toString(){
-    return refname+"\t"+Integer.toString(position)+"\t"+Integer.toString(base);
-  }
-  @Override public int hashCode(){
-    final int prime = 31;
-    int result = 1;
-    result = prime * result + ((refname==null) ? 0 : refname.hashCode());
-    result = prime * result + (int)(position ^ (position >>> 32));
-    result = prime * result + base;
-    return result;
-  }
-}
-
-class RefBinKey implements
-WritableComparable<RefBinKey>{
-
-  private String refname;
-  private int bin;
-
-  public RefBinKey(){}
-  public RefBinKey(String refname,int bin){
-    this.refname = refname;
-    this.bin = bin;
-  }
-
-  public void setRefName(String refname){
-    this.refname = refname;
-  }
-
-  public void setBin(int bin){
-    this.bin = bin;
-  }
-  public void write(DataOutput out) throws IOException {
-    out.writeUTF(refname);
-    out.writeInt(bin);
-  }
-  public String getRefName(){
-    return refname;
-  }
-
-  public void readFields(DataInput in) throws IOException {
-    refname = in.readUTF();
-    bin = in.readInt();
-  }
-
-  public int compareTo(RefBinKey other) {
-    int cmp = refname.compareTo(other.refname);
-    if(cmp!=0) return cmp;
-    else if (this.bin<other.bin) return -1;
-    else if (this.bin>other.bin) return 1;
-    else return 0;
-  }
-
-  @Override public String toString(){
-    return refname+"\t"+Integer.toString(bin);
-  }
-  @Override public int hashCode(){
-    final int prime = 31;
-    int result = 1;
-    result = prime * result + ((refname==null) ? 0 : refname.hashCode());
-    result = prime * result + bin;
-    return result;
-  }
-}
-
-/*
- *  KEY CLASSES END HERE
- *
- */
-
-class SortRecordReader extends RecordReader<RefPosBaseKey,Text>{
-
- /* methods are delegated to this variable
- *
- */
-  private final RecordReader<LongWritable, Text> reader;
-
-  private final RefPosBaseKey currentKey = new RefPosBaseKey();
-  private final Text currentValue = new Text();
-
-  public SortRecordReader(final RecordReader<LongWritable,Text>reader)
-  throws IOException{
-    this.reader = reader;
-  }
-
   @Override
-  public void close() throws IOException {
-    reader.close();
-  }
-
-  @Override 
-  public RefPosBaseKey getCurrentKey(){ 
-    return currentKey;
-  }
-
-  @Override 
-  public Text getCurrentValue(){ 
-    return currentValue;
-  }
-
-  @Override
-  public float getProgress() throws IOException,InterruptedException {
-    return reader.getProgress();
-  }
-
-  @Override
-  public void initialize(InputSplit split, TaskAttemptContext context) 
-  throws IOException,InterruptedException {
-    reader.initialize(split,context);
-  }
-
-  @Override
-  public boolean nextKeyValue()
-  throws IOException,InterruptedException{
-    boolean result = reader.nextKeyValue();
-    if(!result){
-      return false;
-    }
-    Text lineRecordReaderValue = reader.getCurrentValue();
-
-    extractKey(lineRecordReaderValue);
-    currentValue.set(extractValue(lineRecordReaderValue));
-    return true;
-  }
-
-  private void extractKey(final Text value)
-  throws IOException{
-    String[] parts = value.toString().split("\t");
-    //int binRange = (int)(Integer.parseInt(parts[1]) / bin_length);
-    //System.err.println("BINRANGE for "+parts[1]+" is "+binRange);
-    //RefPosBaseKey newKey = new RefPosBaseKey(parts[0],binRange);
-    //RefPosBaseKey newKey = new RefPosBaseKey(parts[0],Integer.parseInt(parts[1]));
-    currentKey.setRefName(parts[0]);
-    currentKey.setPosition(Integer.parseInt(parts[1]));
-    currentKey.setBase(Integer.parseInt(parts[2]));
-    //return newKey;
-  }
-
-  private String extractValue(final Text value)
-  throws IOException{
-    String[] parts = value.toString().split("\t");
-    //String newVal = StringUtils.join(parts,"\t",2,6);
-    return parts[3];
-  }
-}
-
-class SortInputFormat
-extends InputFormat {
-
-  private final TextInputFormat inputFormat = new TextInputFormat();
-
-  @Override
-  public List<InputSplit> getSplits(JobContext context)
-  throws IOException,InterruptedException{
-    return inputFormat.getSplits(context);
-  }
-
-  @Override
-  public RecordReader<RefPosBaseKey,Text> createRecordReader(final InputSplit genericSplit, TaskAttemptContext context)
-  throws IOException,InterruptedException {
-    context.setStatus(genericSplit.toString());
-    return new SortRecordReader(inputFormat.createRecordReader(genericSplit,context));
+  public int compare(WritableComparable w1, WritableComparable w2) {
+    RefBinKey key1 = (RefBinKey)w1;
+    RefBinKey key2 = (RefBinKey)w2;
+    return key1.getRefName().compareTo(key2.getRefName());
   }
 }
 
@@ -770,14 +287,3 @@ class ChrPartitioner extends Partitioner<RefBinKey,Text>{
   }
 }
 
-class ChrGroupingComparator extends WritableComparator{
-  protected ChrGroupingComparator(){
-    super(RefBinKey.class,true);
-  }
-  @Override
-  public int compare(WritableComparable w1, WritableComparable w2) {
-    RefBinKey key1 = (RefBinKey)w1;
-    RefBinKey key2 = (RefBinKey)w2;
-    return key1.getRefName().compareTo(key2.getRefName());
-  }
-}

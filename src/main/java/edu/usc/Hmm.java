@@ -33,9 +33,15 @@ public class Hmm{
   private float[] mu = {-.5f,0,0,.5f};
   private int[] cn_arr = {1,2,2,3};
   private int [] best_state;
+  //private float alpha=0;
   private float alpha=.5f;
   private float  lambda1=0.1f;
   private float lambda2=0.1f;
+
+  private static final int STATE_SINGLE_DEL=0;
+  private static final int STATE_CN_LOH=1;
+  private static final int STATE_NORMAL=2;
+  private static final int STATE_SINGLE_DUP=3;
 
   public Hmm(int markers){
     this.markers = markers;
@@ -104,16 +110,24 @@ public class Hmm{
   
   private void compute_emission(){
     if(markers<2) return;
+    boolean debug = false;
     for(int i=0;i<markers;++i){
+      if(debug) System.err.print("\n"+i+"\tLRR:"+scaled_depth[i]+"\tBAF:"+data[i*2+1]) ;
       for(int state=0;state<states;++state){
         float dev = scaled_depth[i] - mu[state];
         lrr_mat[i*states+state] = dev*dev;
-        if(state==0 || state==1){
-          baf_mat[i*states+state] = Math.abs(data[i*2+1] - 0); // fill this in later
-        }else{
-          baf_mat[i*states+state] = Math.abs(data[i*2+1] - 0.1f); // fill this in later
+        float dev2=0;
+        if(state==STATE_SINGLE_DEL || state==STATE_CN_LOH){
+          dev2=data[i*2+1]-0;
+        }else if(state==STATE_NORMAL){
+          dev2 = Math.min((float)Math.abs(data[i*2+1]-.5),data[i*2+1]-0);
+        }else if(state==STATE_SINGLE_DUP){
+          dev2 = Math.min((float)Math.abs(data[i*2+1]-.3),data[i*2+1]-0);
         }
+        baf_mat[i*states+state] = dev2*dev2;
+        if(debug)System.err.print("\t"+lrr_mat[i*states+state]+","+baf_mat[i*states+state]);
       }
+      if(debug)System.err.println();
     }
   }
 
@@ -121,7 +135,7 @@ public class Hmm{
     int[] traceback = new int[markers*states];
     float min = Float.MAX_VALUE;
     for(int state=0;state<states;++state){
-      loss_mat[state] = lrr_mat[state]+alpha*baf_mat[state]+lambda1*Math.abs(mu[state]);
+      loss_mat[state] = (1-alpha)*lrr_mat[state]+alpha*baf_mat[state]+lambda1*Math.abs(mu[state]);
       if(loss_mat[state]<min) min = loss_mat[state];
     }
     for(int marker=1;marker<markers;++marker){
@@ -130,7 +144,7 @@ public class Hmm{
         min = Float.MAX_VALUE;
         float loss = 0;
         for(int prev=0;prev<states;++prev){
-          loss = loss_mat[(marker-1)*states+prev]+lrr_mat[marker*states+
+          loss = loss_mat[(marker-1)*states+prev]+(1-alpha)*lrr_mat[marker*states+
           current]+alpha * baf_mat[marker*states+current]+lambda1 *
           Math.abs(mu[current]) + lambda2*(dist)*Math.abs(mu[current]- mu[prev]);
           if(loss<min) {
@@ -142,7 +156,7 @@ public class Hmm{
         if(min==1e10) {
           System.err.println("A Failed to find minimum:");
           for(int prev=0;prev<states;++prev){
-            loss = loss_mat[(marker-1)*states+prev]+lrr_mat[marker*states+
+            loss = loss_mat[(marker-1)*states+prev]+(1-alpha)*lrr_mat[marker*states+
             current]+alpha * baf_mat[marker*states+current]+lambda1 *
             Math.abs(mu[current]) + lambda2*(dist)*Math.abs(mu[current]- mu[prev]);
             System.err.println(" "+prev+","+loss);
@@ -174,47 +188,52 @@ public class Hmm{
   // returns -1 if small CNVs found, 1 if big CNVs found, 0 else
   
   private int good_cnv_size(){
-    // these are user preferences for CNV distributions
-    //int abb_count_threshold_min = 100;
-    int length_threshold_min  = (int)(markers*.01);
-    int length_threshold_max =  (int)(markers*.1);
-    //int abb_count_threshold_max = 1000;
-    System.err.println("Good CNV range: "+length_threshold_min+" to "+length_threshold_max);
-
-    int last_cn = 2;
-    int abb_start = -1;
-    int abb_end = -1;
-    int size_flag=0;
-    //int under_min_abberation = 0;
-    //int over_max_abberation = 0;
-    int total_abb_len = 0;
-    for(int marker = 0;marker< markers;++marker){
-      int cur_cn = cn_arr[best_state[marker]];
-      if(last_cn ==2 && cur_cn!=2) {
-        abb_start = marker;
-        //System.err.println("Abberation start at marker "+marker);
-      }else if(last_cn!=2 && cur_cn==2) {
-        abb_end = marker-1;
-        //System.err.println("Abberation end at marker "+abb_end);
-        int len = abb_end-abb_start+1;
-        total_abb_len+=len;
-        //if (len>length_threshold_max) ++over_max_abberation;
-        //if (len<length_threshold_min) ++under_min_abberation;
-         
+    boolean do_search = false;
+    if(do_search){
+      // these are user preferences for CNV distributions
+      //int abb_count_threshold_min = 100;
+      int length_threshold_min  = (int)(markers*.01);
+      int length_threshold_max =  (int)(markers*.1);
+      //int abb_count_threshold_max = 1000;
+      System.err.println("Good CNV range: "+length_threshold_min+" to "+length_threshold_max);
+  
+      int last_cn = 2;
+      int abb_start = -1;
+      int abb_end = -1;
+      int size_flag=0;
+      //int under_min_abberation = 0;
+      //int over_max_abberation = 0;
+      int total_abb_len = 0;
+      for(int marker = 0;marker< markers;++marker){
+        int cur_cn = cn_arr[best_state[marker]];
+        if(last_cn ==2 && cur_cn!=2) {
+          abb_start = marker;
+          //System.err.println("Abberation start at marker "+marker);
+        }else if(last_cn!=2 && cur_cn==2) {
+          abb_end = marker-1;
+          //System.err.println("Abberation end at marker "+abb_end);
+          int len = abb_end-abb_start+1;
+          total_abb_len+=len;
+          //if (len>length_threshold_max) ++over_max_abberation;
+          //if (len<length_threshold_min) ++under_min_abberation;
+           
+        }
+        last_cn = cur_cn;
       }
-      last_cn = cur_cn;
+      // nothing was found, too strong a penalty
+      //if (abb_start==-1) return 1;
+      System.err.println("Abberation len "+total_abb_len);
+      if(total_abb_len>length_threshold_max){
+        System.err.println("Abberation len too big, aborting"); 
+        size_flag = -1;
+      }else if(total_abb_len<length_threshold_min){
+        System.err.println("Abberation len too small, aborting"); 
+        size_flag = 1;
+      }
+      return size_flag;
+    }else{ // skip search
+      return 0;
     }
-    // nothing was found, too strong a penalty
-    //if (abb_start==-1) return 1;
-    System.err.println("Abberation len "+total_abb_len);
-    if(total_abb_len>length_threshold_max){
-      System.err.println("Abberation len too big, aborting"); 
-      size_flag = -1;
-    }else if(total_abb_len<length_threshold_min){
-      System.err.println("Abberation len too small, aborting"); 
-      size_flag = 1;
-    }
-    return size_flag;
   }
 
   public Iterator<String> getResults(){
@@ -273,10 +292,11 @@ public class Hmm{
       start.add(Integer.decode(parts[0]));
       end.add(Integer.decode(parts[1]));
       depth.add(Float.valueOf(parts[2]));
-      int bac = Integer.valueOf(parts[3]); 
+      baf.add(Float.valueOf(parts[3]));
+      //int bac = Integer.valueOf(parts[3]); 
       mean_coverage+=(Float.valueOf(parts[4]));
       sites+=(Integer.valueOf(parts[5]));
-      baf.add((float)bac/Integer.valueOf(parts[5]));
+      //baf.add((float)bac/Integer.valueOf(parts[5]));
     }
     //Object[] depth_arr = depth.toArray();
     //Arrays.sort(depth_arr);
@@ -307,7 +327,9 @@ public class Hmm{
 
   public static void main(String args[]){
     try{
-      String filename = args[1];
+      //for(int i=0;i<args.length;++i) System.err.println(args[i]);
+      //System.exit(1);
+      String filename = args[0];
       List<String> lines = Files.readAllLines(Paths.get(filename),Charset.defaultCharset());
       int markers = lines.size();
       System.err.println("There are "+lines.size()+" lines in "+filename);
@@ -324,16 +346,17 @@ public class Hmm{
         String []parts = lines_it.next().split("\t");
         int partindex = 0;
         refName = parts[partindex++];
-        ++partindex;
+        ++partindex;  // bin
         ranges[marker*2] = Integer.parseInt(parts[partindex++]);
         ranges[marker*2+1] = Integer.parseInt(parts[partindex++]);
         data[marker*2] = Float.parseFloat(parts[partindex++]);
-        int bac = Integer.parseInt(parts[partindex++]);
+        data[marker*2+1] = Float.parseFloat(parts[partindex++]);
+        //int bac = Integer.parseInt(parts[partindex++]);
         float totalDepth = Float.parseFloat(parts[partindex++]);
         mean_coverage+=totalDepth;
         int binMarkers = Integer.parseInt(parts[partindex++]);
         sites+=binMarkers;
-        data[marker*2+1] = (float)bac/binMarkers;
+        //data[marker*2+1] = (float)bac/binMarkers;
         //System.err.println("marker "+ranges[marker*2]+" with depth "+data[marker*2]+" and baf "+data[marker*2+1]);
         ++marker;
       }
@@ -363,7 +386,7 @@ public class Hmm{
     @Override
     public String next(){ 
       if (marker>=markers) throw new NoSuchElementException();
-      String res = Integer.toString(ranges[marker*2])+"\t"+Integer.toString(ranges[marker*2+1])+"\t"+Float.toString(scaled_depth[marker])+"\t"+Integer.toString(cn_arr[best_state[marker]])+"\t" + Integer.toString(best_state[marker]);
+      String res = Integer.toString(ranges[marker*2])+"\t"+Integer.toString(ranges[marker*2+1])+"\t"+Float.toString(scaled_depth[marker])+"\t"+Float.toString(data[marker*2+1])+"\t"+Integer.toString(cn_arr[best_state[marker]])+"\t" + Integer.toString(best_state[marker]);
       ++marker;
       return res;
     }
