@@ -1,54 +1,15 @@
 package edu.usc;
 
 import java.io.IOException;
-import java.io.DataInput;
-import java.io.DataOutput;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.Set;
-import java.util.TreeSet;
-
 import org.apache.commons.lang.StringUtils;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.GlobFilter;
-//import org.apache.hadoop.mapred.JobConf;
-//import org.apache.hadoop.mapred.Reporter;
-import org.apache.hadoop.mapreduce.InputFormat;
-import org.apache.hadoop.mapreduce.InputSplit;
-import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.hadoop.mapreduce.Partitioner;
-import org.apache.hadoop.mapreduce.RecordReader;
-import org.apache.hadoop.mapreduce.Reducer;
-import org.apache.hadoop.mapreduce.TaskAttemptContext;
-import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
-import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
-import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
-import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
-import org.apache.hadoop.mapreduce.lib.partition.InputSampler;
-import org.apache.hadoop.mapreduce.lib.partition.HashPartitioner;
-import org.apache.hadoop.mapreduce.lib.partition.TotalOrderPartitioner;
-import org.apache.hadoop.util.GenericOptionsParser;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.io.WritableComparator;
-import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.DoubleWritable;
-import org.apache.hadoop.util.Tool;
-import org.apache.hadoop.util.ToolRunner;
-
 import htsjdk.samtools.SAMRecord;
 import htsjdk.samtools.AlignmentBlock;
-
-import org.seqdoop.hadoop_bam.AnySAMInputFormat;
 import org.seqdoop.hadoop_bam.SAMRecordWritable;
 
 public class Mappers{
@@ -58,8 +19,10 @@ public class Mappers{
 class BinMapper
 extends Mapper<LongWritable,Text,
                RefBinKey,Text> {
+
+  // this is the hard-coded length of the bin size
+
   private final RefBinKey refBinKey = new RefBinKey();
-  private final int bin_length = PennCnvSeq.bin_length;
 
 
   private final Text newVal = new Text();
@@ -69,9 +32,9 @@ extends Mapper<LongWritable,Text,
     throws InterruptedException, IOException{
       String []parts = inval.toString().split("\t");
       String refname = parts[0];
-      int bin = (int)(Integer.parseInt(parts[1])/bin_length);
+      //System.err.println("Bin length value: "+Constants.bin_width);
+      int bin = (int)(Integer.parseInt(parts[1])/Constants.bin_width);
       String binMapValue = StringUtils.join(parts,"\t",1,4);
-      //System.err.println("BinMap value: "+binMapValue);
       refBinKey.setRefName(refname);
       refBinKey.setBin(bin);
       newVal.set(binMapValue);

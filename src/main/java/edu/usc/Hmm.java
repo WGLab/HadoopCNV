@@ -34,9 +34,9 @@ public class Hmm{
   private int[] cn_arr = {1,2,2,3};
   private int [] best_state;
   //private float alpha=0;
-  private float alpha=.5f;
-  private float  lambda1=0.1f;
-  private float lambda2=0.1f;
+  private float alpha=Constants.alpha;
+  private float lambda1=Constants.abberration_penalty;
+  private float lambda2=Constants.transition_penalty;
 
   private static final int STATE_SINGLE_DEL=0;
   private static final int STATE_CN_LOH=1;
@@ -70,10 +70,8 @@ public class Hmm{
     scale_depth();
     float sd = get_sd();
     System.err.println("Standard deviation is "+sd);
-    this.lambda1 = sd;
-    this.lambda2 = 2*sd*(float)Math.sqrt(Math.log(markers));
-    lambda1*=1;
-    lambda2*=1;
+    if(this.lambda1 < 0 ) this.lambda1 = sd;
+    if(this.lambda2 < 0 ) this.lambda2 = 2*sd*(float)Math.sqrt(Math.log(markers));
     System.err.println("Chr "+refName+" lambda 1 and 2 are "+lambda1+" and "+lambda2);
   }
 

@@ -1,129 +1,87 @@
 package edu.usc;
 
 import java.io.IOException;
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.Set;
-import java.util.TreeSet;
-
-import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.GlobFilter;
-//import org.apache.hadoop.mapred.JobConf;
-//import org.apache.hadoop.mapred.Reporter;
-import org.apache.hadoop.mapreduce.InputFormat;
-import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Partitioner;
-import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.Reducer;
-import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
-import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.partition.InputSampler;
 import org.apache.hadoop.mapreduce.lib.partition.HashPartitioner;
 import org.apache.hadoop.mapreduce.lib.partition.TotalOrderPartitioner;
-import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableComparator;
-import org.apache.hadoop.io.NullWritable;
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-
-import htsjdk.samtools.SAMRecord;
-import htsjdk.samtools.AlignmentBlock;
-
 import org.seqdoop.hadoop_bam.AnySAMInputFormat;
-import org.seqdoop.hadoop_bam.SAMRecordWritable;
 
 public class PennCnvSeq
 extends Configured
 implements Tool{
 
-  UserConfig userConfig;
   Configuration conf;
   Path bamfile,vcffile;
   String bamfileStr,vcffileStr;
-  static int bin_length;
   
   public PennCnvSeq(){
   }
 
   @Override
   public int run(String args[]){
-    for(int i=0;i<args.length;++i) System.err.println("Argument "+i+": "+args[i]);
+    for(int i=0;i<args.length;++i) System.out.println("Argument "+i+": "+args[i]);
     this.conf = super.getConf();
     FileSystem fileSystem = null;
-    this.userConfig = new UserConfig();
     try{
-      userConfig.init(args[0]);
+      UserConfig.init(args[0]);
     }catch (IOException ex){
        System.err.println("Cannot open configuration file "+args[0]);
        ex.printStackTrace(System.err);
        System.exit(1);
     }
-    this.bamfileStr = userConfig.getBamFile();
-    this.vcffileStr = userConfig.getVcfFile();
-    this.bin_length = userConfig.getBinWidth();
-    this.bamfile = new Path(bamfileStr);
-    this.vcffile = new Path(vcffileStr);
-    System.err.println("Bamfile is at "+bamfile);
-    System.err.println("Vcffile is at "+vcffile);
     if(conf==null) System.err.println("Configuration null!");
-
-
     try{
-      int numReduceTasksBig = 800;
-      int numReduceTasksSmall = 100;
-      boolean runVcfLookup = true;
-      boolean runDepthCallJob = true;
-      boolean runRegionBinJob = true;
-      boolean runCnvCallJob = true;
+      int numReduceTasksBig = UserConfig.getBamFileReducers();
+      int numReduceTasksSmall = UserConfig.getTextFileReducers();
+      boolean runVcfLookup = UserConfig.getInitVcf(); 
+      boolean runDepthCallJob = UserConfig.getRunDepthCaller();
+      boolean runRegionBinJob = UserConfig.getRunBinner();
+      boolean runCnvCallJob = UserConfig.getRunCnvCaller();
       boolean runGlobalSortJob = false;
       fileSystem = FileSystem.get(conf);
       if(runVcfLookup){
+        this.vcffileStr = UserConfig.getVcfFile();
+        this.vcffile = new Path(vcffileStr);
+        System.out.println("Vcffile is at "+vcffile);
         VcfLookup lookup = new VcfLookup();
         lookup.parseVcf(vcffileStr);
         //lookup.readObject();
       }
       if(runDepthCallJob){
         //conf.setInt("dfs.blocksize",512*1024*1024);
-        //
-        //
-        conf.set("yarn.scheduler.minimum-allocation-mb","1024");
-        System.err.println("DEBUG CONF: "+conf.get("yarn.scheduler.minimum-allocation-mb"));
+        conf.set("yarn.scheduler.minimum-allocation-mb",UserConfig.getYarnContainerMinMb());
+        System.out.println("Memory configuration YARN min MB: "+conf.get("yarn.scheduler.minimum-allocation-mb"));
 
-        conf.set("yarn.scheduler.maximum-allocation-mb","8192");
-        System.err.println("DEBUG CONF: "+conf.get("yarn.scheduler.maximum-allocation-mb"));
+        conf.set("yarn.scheduler.maximum-allocation-mb",UserConfig.getYarnContainerMaxMb());
+        System.out.println("Memory configuration YARN max MB: "+conf.get("yarn.scheduler.maximum-allocation-mb"));
+        conf.set("mapred.child.java.opts", "-Xms"+UserConfig.getHeapsizeMinMb()+"m -Xmx"+UserConfig.getHeapsizeMaxMb()+"m");
+        System.out.println("Memory configuration Heap in MB: "+conf.get("mapred.child.java.opts"));
 
-        // heap size
-        conf.set("mapred.child.java.opts", "-Xms100m -Xmx2000m");
-        System.err.println("DEBUG CONF: "+conf.get("mapred.child.java.opts"));
+        conf.set("mapreduce.map.memory.mb",UserConfig.getMapperMb());
+        System.out.println("Memory configuration Mapper MB: "+conf.get("mapreduce.map.memory.mb"));
 
-        conf.set("mapreduce.map.memory.mb","2048");
-        System.err.println("DEBUG CONF: "+conf.get("mapreduce.map.memory.mb"));
-
-        conf.set("mapreduce.reduce.memory.mb","2048");
-        System.err.println("DEBUG CONF: "+conf.get("mapreduce.reduce.memory.mb"));
-        //System.err.println("DEBUG CONF: "+conf.get("yarn.app.mapreduce.am.resource.mb"));
-        //System.err.println("DEBUG CONF: "+conf.get("mapred.child.java.opts"));
-        //conf.set("mapreduce.map.memory.mb","2048");
-        //System.err.println("DEBUG CONF: "+conf.get("mapreduce.map.memory.mb"));
+        conf.set("mapreduce.reduce.memory.mb",UserConfig.getReducerMb());
+        System.out.println("Memory configuration Reducer MB: "+conf.get("mapreduce.reduce.memory.mb"));
+        this.bamfileStr = UserConfig.getBamFile();
+        this.bamfile = new Path(bamfileStr);
+        System.out.println("Bamfile is at "+bamfile);
         Job depthCallJob = new Job(conf);
         depthCallJob.setJobName("depth_caller");
         depthCallJob.setNumReduceTasks(numReduceTasksBig);
@@ -142,9 +100,9 @@ implements Tool{
         FileInputFormat.addInputPath(depthCallJob,bamfile);
         fileSystem.delete(new Path("workdir/depth"),true);
         FileOutputFormat.setOutputPath(depthCallJob,new Path("workdir/depth"));
-        System.err.println("DEPTH CALL JOB submitting.");
+        System.out.println("Submitting read depth caller.");
         if (!depthCallJob.waitForCompletion(true)) {
-          System.err.println("DEPTH CALL JOB failed.");
+          System.out.println("Depth caller failed.");
           return -1;
         }
       }
@@ -164,9 +122,9 @@ implements Tool{
         FileInputFormat.addInputPath(regionBinJob,new Path("workdir/depth/"));
         fileSystem.delete(new Path("workdir/bins"),true);
         FileOutputFormat.setOutputPath(regionBinJob,new Path("workdir/bins"));
-        System.err.println("REGION BIN JOB submitting.");
+        System.out.println("Submitting binner.");
         if (!regionBinJob.waitForCompletion(true)) {
-          System.err.println("REGION BIN JOB failed.");
+          System.out.println("Binner failed.");
           return -1;
         }
       }
@@ -190,9 +148,9 @@ implements Tool{
         FileInputFormat.addInputPath(secondarySortJob,new Path("workdir/bins/"));
         fileSystem.delete(new Path("workdir/cnv"),true);
         FileOutputFormat.setOutputPath(secondarySortJob,new Path("workdir/cnv"));
-        System.err.println("SECONDARY SORT JOB submitting.");
+        System.out.println("Submitting CNV caller.");
         if (!secondarySortJob.waitForCompletion(true)) {
-          System.err.println("SECONDARY SORT JOB failed.");
+          System.out.println("CNV caller failed.");
           return -1;
         }
       }
@@ -221,9 +179,9 @@ implements Tool{
         regionSortJob.setPartitionerClass(TotalOrderPartitioner.class);
         TotalOrderPartitioner.setPartitionFile(regionSortJob.getConfiguration(),new Path("workdir/partitioning"));
         InputSampler.writePartitionFile(regionSortJob, sampler);
-        System.err.println("REGION SORT JOB submitting.");
+        System.out.println("Submitting global sort.");
         if (!regionSortJob.waitForCompletion(true)) {
-          System.err.println("REGION SORT JOB failed.");
+          System.out.println("Global sort failed.");
           return 1;
         }
       }
@@ -248,7 +206,7 @@ implements Tool{
       //GenericOptionsParser parser = new GenericOptionsParser(args);
       //PennCnvSeq pennCnvSeq = new PennCnvSeq(args);
       //pennCnvSeq.run();
-      System.err.println("I'm done");
+      System.out.println("Pipeline is complete.");
     }catch(Exception ex){
       ex.printStackTrace();
       System.exit(1);
