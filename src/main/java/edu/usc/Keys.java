@@ -171,6 +171,10 @@ WritableComparable<RefBinKey>{
     return refname;
   }
 
+  public int getBin(){
+    return bin;
+  }
+
   public void readFields(DataInput in) throws IOException {
     refname = in.readUTF();
     bin = in.readInt();

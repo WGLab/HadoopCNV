@@ -19,6 +19,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.DoubleWritable;
+import org.apache.hadoop.io.ArrayPrimitiveWritable;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.seqdoop.hadoop_bam.AnySAMInputFormat;
@@ -66,19 +67,19 @@ implements Tool{
       }
       if(runDepthCallJob){
         //conf.setInt("dfs.blocksize",512*1024*1024);
-        conf.set("yarn.scheduler.minimum-allocation-mb",UserConfig.getYarnContainerMinMb());
-        System.out.println("Memory configuration YARN min MB: "+conf.get("yarn.scheduler.minimum-allocation-mb"));
+        //conf.set("yarn.scheduler.minimum-allocation-mb",UserConfig.getYarnContainerMinMb());
+        //System.out.println("Memory configuration YARN min MB: "+conf.get("yarn.scheduler.minimum-allocation-mb"));
 
-        conf.set("yarn.scheduler.maximum-allocation-mb",UserConfig.getYarnContainerMaxMb());
-        System.out.println("Memory configuration YARN max MB: "+conf.get("yarn.scheduler.maximum-allocation-mb"));
-        conf.set("mapred.child.java.opts", "-Xms"+UserConfig.getHeapsizeMinMb()+"m -Xmx"+UserConfig.getHeapsizeMaxMb()+"m");
-        System.out.println("Memory configuration Heap in MB: "+conf.get("mapred.child.java.opts"));
+        //conf.set("yarn.scheduler.maximum-allocation-mb",UserConfig.getYarnContainerMaxMb());
+        //System.out.println("Memory configuration YARN max MB: "+conf.get("yarn.scheduler.maximum-allocation-mb"));
+        //conf.set("mapred.child.java.opts", "-Xms"+UserConfig.getHeapsizeMinMb()+"m -Xmx"+UserConfig.getHeapsizeMaxMb()+"m");
+        //System.out.println("Memory configuration Heap in MB: "+conf.get("mapred.child.java.opts"));
 
-        conf.set("mapreduce.map.memory.mb",UserConfig.getMapperMb());
-        System.out.println("Memory configuration Mapper MB: "+conf.get("mapreduce.map.memory.mb"));
+        //conf.set("mapreduce.map.memory.mb",UserConfig.getMapperMb());
+        //System.out.println("Memory configuration Mapper MB: "+conf.get("mapreduce.map.memory.mb"));
 
-        conf.set("mapreduce.reduce.memory.mb",UserConfig.getReducerMb());
-        System.out.println("Memory configuration Reducer MB: "+conf.get("mapreduce.reduce.memory.mb"));
+        //conf.set("mapreduce.reduce.memory.mb",UserConfig.getReducerMb());
+        //System.out.println("Memory configuration Reducer MB: "+conf.get("mapreduce.reduce.memory.mb"));
         this.bamfileStr = UserConfig.getBamFile();
         this.bamfile = new Path(bamfileStr);
         System.out.println("Bamfile is at "+bamfile);
@@ -87,14 +88,20 @@ implements Tool{
         depthCallJob.setNumReduceTasks(numReduceTasksBig);
         depthCallJob.setInputFormatClass(AnySAMInputFormat.class);
         depthCallJob.setJarByClass(PennCnvSeq.class);
-        depthCallJob.setMapperClass(SAMRecordMapper.class);
-        depthCallJob.setMapOutputKeyClass(RefPosBaseKey.class);
-        //depthCallJob.setMapOutputKeyClass(LongWritable.class);
-        depthCallJob.setMapOutputValueClass(DoubleWritable.class);
-        depthCallJob.setCombinerClass(AlleleDepthReducer.class);
-        depthCallJob.setReducerClass(AlleleDepthReducer.class);
+        boolean use_window_mapper = true;
+        if(use_window_mapper){
+          depthCallJob.setMapperClass(SAMRecordWindowMapper.class);
+          depthCallJob.setMapOutputKeyClass(RefBinKey.class);
+          depthCallJob.setMapOutputValueClass(ArrayPrimitiveWritable.class);
+          depthCallJob.setReducerClass(AlleleDepthWindowReducer.class);
+        }else{
+          depthCallJob.setMapperClass(SAMRecordMapper.class);
+          depthCallJob.setMapOutputKeyClass(RefPosBaseKey.class);
+          depthCallJob.setMapOutputValueClass(DoubleWritable.class);
+          depthCallJob.setCombinerClass(AlleleDepthReducer.class);
+          depthCallJob.setReducerClass(AlleleDepthReducer.class);
+        }
         depthCallJob.setOutputKeyClass   (RefPosBaseKey.class);
-        //depthCallJob.setOutputKeyClass   (NullWritable.class);
         depthCallJob.setOutputValueClass (DoubleWritable.class);
         //FileInputFormat.setInputPathFilter(depthCallJob,GlobFilter.class);
         FileInputFormat.addInputPath(depthCallJob,bamfile);

@@ -3,6 +3,7 @@ package edu.usc;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Set;
@@ -10,6 +11,7 @@ import java.util.TreeSet;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.DoubleWritable;
+import org.apache.hadoop.io.ArrayPrimitiveWritable;
 
 public class Reducers{
 }
@@ -122,9 +124,14 @@ extends Reducer<RefBinKey,Text,
   }
 }
   
+
 class AlleleDepthReducer
 extends Reducer<RefPosBaseKey,DoubleWritable,
                RefPosBaseKey,DoubleWritable> {
+  DoubleWritable doubleWritable = null;
+  public AlleleDepthReducer(){
+    doubleWritable = new DoubleWritable();
+  }
   @Override protected void reduce(RefPosBaseKey inkey,Iterable<DoubleWritable> invals, Reducer<RefPosBaseKey,DoubleWritable, RefPosBaseKey,DoubleWritable>.Context ctx)
     throws InterruptedException, IOException{
       Iterator<DoubleWritable> it = invals.iterator();
@@ -132,9 +139,97 @@ extends Reducer<RefPosBaseKey,DoubleWritable,
       while(it.hasNext()){
         sum+= it.next().get();
       }      
-      if(sum>=1.0) ctx.write(inkey,new DoubleWritable(sum));  
+
+      if(sum>=1.0){
+        doubleWritable.set(sum);
+         ctx.write(inkey,doubleWritable);  
+      }
       //System.err.println("REDUCER: "+inkey.toString()+": "+sum);
     }
+}
+
+
+// this version uses an array that roughly is the size of reads with
+// the hope that there are less maps and reduces to do
+
+class AlleleDepthWindowReducer
+extends Reducer<RefBinKey,ArrayPrimitiveWritable,
+               RefPosBaseKey,DoubleWritable> {
+  RefPosBaseKey refPosBaseKey = null;
+  DoubleWritable doubleWritable = null;
+  List<Map<Integer,Double> > qualitymap_list = null;
+ 
+  public AlleleDepthWindowReducer(){
+    int bin_size = Constants.read_bin_width;
+    refPosBaseKey = new RefPosBaseKey();
+    doubleWritable = new DoubleWritable();
+    qualitymap_list = new ArrayList<Map<Integer,Double> >(bin_size);
+    // initialize the List
+    for(int i=0;i<bin_size;++i){
+      qualitymap_list.add(null);
+      //qualitymap_list.add(new HashMap<Integer,Double>());
+    }
+  }
+  @Override protected void reduce(RefBinKey inkey,Iterable<ArrayPrimitiveWritable> invals, Reducer<RefBinKey,ArrayPrimitiveWritable, RefPosBaseKey,DoubleWritable>.Context ctx)
+    throws InterruptedException, IOException{
+      int bin_size = Constants.read_bin_width;
+      refPosBaseKey.setRefName(inkey.getRefName());
+      //refPosBaseKey.setBase(1);
+      //doubleWritable.set(0);
+      //for(int i=0;i<bin_size;++i){
+        //refPosBaseKey.setPosition(inkey.getBin() + i + 1);
+        //ctx.write(refPosBaseKey,doubleWritable);  
+      //}
+if(true){
+      Iterator<ArrayPrimitiveWritable> it = invals.iterator();
+      //double sum = 0.;
+      double quality_threshold=Constants.base_quality_threshold;
+      while(it.hasNext()){
+        //sum+= it.next().get();
+        byte[] base_info = (byte[])it.next().get();
+        for(int i=0;i<bin_size;++i){
+          int allele = (int)base_info[i*2];
+          int basequal =  (int)base_info[i*2+1];
+          if(allele>0){
+            double qual = 1.-Math.pow(10,-basequal*.1);
+            if(qual > quality_threshold){
+              Map<Integer,Double> map = qualitymap_list.get(i);
+              Double val = null ;
+              if(map==null) {
+                map = new HashMap<Integer,Double>();
+                val = qual;
+              }else{
+                val = map.get(allele);
+                val= (val==null)?qual:val+qual;
+              }
+              map.put(allele,val);
+              qualitymap_list.set(i,map);
+            }
+        
+          }
+        }
+      }      
+      for(int i=0;i<bin_size;++i){
+        Map<Integer,Double> map = qualitymap_list.get(i);
+        if(map!=null){
+          // convert things base to 1-based
+          refPosBaseKey.setPosition(inkey.getBin() + i + 1);
+          Set<Map.Entry<Integer,Double>> set = map.entrySet();
+          Iterator<Map.Entry<Integer,Double>> it2 = set.iterator();
+          while(it2.hasNext()){
+            Map.Entry<Integer,Double> entry = it2.next();
+            Integer allele = entry.getKey();
+            Double depth = entry.getValue();
+            refPosBaseKey.setBase(allele);
+            doubleWritable.set(depth);
+            ctx.write(refPosBaseKey,doubleWritable);  
+          }
+        }
+      }
+      //if(sum>=1.0) ctx.write(outkey,new DoubleWritable(sum));  
+      //System.err.println("REDUCER: "+inkey.toString()+": "+sum);
+    }
+}
 }
 
 

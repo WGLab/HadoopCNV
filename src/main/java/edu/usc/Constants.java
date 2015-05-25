@@ -5,7 +5,10 @@ package edu.usc;
 
 
 public class Constants{
-
+  // Read bin
+  public static final int read_bin_width = 100;
+  public static final double mapping_quality_threshold = .99;
+  public static final double base_quality_threshold = .99;
 
   // Binner settings
   public static final int bin_width = 1;
