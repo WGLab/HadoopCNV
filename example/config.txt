@@ -1,10 +1,11 @@
 # it is assumed that this file exists on HDFS already
-BAM_FILE: /bamfiles/NA12878*chrom22*.bam
+BAM_FILE: /bamfiles/NA12878*chrom*.bam
 # this is the local path to the corresponding VCF. Change accordingly.
 VCF_FILE: vcfs/KGP/NA12878_KGP.vcf
 # following are the pipeline components that should be run.
-INIT_VCF_LOOKUP: false
-RUN_DEPTH_CALLER: true
+RUN_DEPTH_CALLER: false
+RUN_GLOBAL_SORT: false
+INIT_VCF_LOOKUP: true
 RUN_BINNER: true
 RUN_CNV_CALLER: true
 # We want the number of BAM file reducers to be approximately equal

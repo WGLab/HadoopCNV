@@ -21,7 +21,8 @@ extends Reducer<RefBinKey,Text,
                RefBinKey,Text> {
   
   private final Text retText = new Text();
-  private final Map<Integer,List<Float> > binMap = new HashMap();
+  private final Map<Integer,Boolean > binMapInVcf = new HashMap();
+  private final Map<Integer,List<Float> > binMapDepth = new HashMap();
   private final Set<Float> depthSet = new TreeSet();
   private final Set<Float> bafSet = new TreeSet();
 
@@ -30,7 +31,8 @@ extends Reducer<RefBinKey,Text,
   Reducer<RefBinKey,Text, RefBinKey,Text>.Context ctx)
   throws InterruptedException, IOException{
     Iterator<Text> it = invals.iterator();
-    binMap.clear();
+    binMapInVcf.clear();
+    binMapDepth.clear();
     int startbp = Integer.MAX_VALUE;
     int endbp = Integer.MIN_VALUE;
     while(it.hasNext()){
@@ -41,14 +43,20 @@ extends Reducer<RefBinKey,Text,
       if(bp>endbp)endbp = bp;
       if(bp<startbp)startbp = bp;
       int allele = Integer.parseInt(parts[p++]);
-      Float depth = Float.valueOf(parts[p++]);
-      if (binMap.get(bp)==null){
-        binMap.put(bp,new java.util.ArrayList());
+      boolean in_vcf = allele==0;
+      if (binMapInVcf.get(bp)==null){
+        binMapInVcf.put(bp,in_vcf);
+      }else{
+        if (in_vcf) binMapInVcf.put(bp,in_vcf);
       }
-      binMap.get(bp).add(depth);
+      Float depth = Float.valueOf(parts[p++]);
+      if (binMapDepth.get(bp)==null){
+        binMapDepth.put(bp,new java.util.ArrayList());
+      }
+      binMapDepth.get(bp).add(depth);
       //System.err.println("BIN REDUCER: "+inkey.toString()+" : "+bp+" : "+depth);
     }
-    Iterator<Integer> it_keys = binMap.keySet().iterator();
+    Iterator<Integer> it_keys = binMapDepth.keySet().iterator();
     depthSet.clear();
     bafSet.clear();
     double total_depth = 0;
@@ -58,14 +66,15 @@ extends Reducer<RefBinKey,Text,
     int baf_n = 0;
     while(it_keys.hasNext()){
       Integer bp = it_keys.next();
-      Iterator<Float> depthListIterator = binMap.get(bp).iterator();
+      boolean in_vcf = binMapInVcf.get(bp);
+      Iterator<Float> depthListIterator = binMapDepth.get(bp).iterator();
       float maxDepth = 0,pos_depth=0;
       while(depthListIterator.hasNext()){
         float depth = depthListIterator.next().floatValue();
         pos_depth+=depth;
         if(depth>maxDepth) maxDepth = depth;
       }
-      float baf = (pos_depth-maxDepth)/pos_depth;
+      float baf = (in_vcf)?(pos_depth-maxDepth)/pos_depth:0f;
       //if(pos_depth<20 || baf<0.1) baf = 0f;
       if(baf > 0f){ 
         //System.err.println("BIN REDUCER adding at "+bp+" : "+pos_depth+","+baf);
@@ -92,8 +101,8 @@ extends Reducer<RefBinKey,Text,
     }
     //System.err.println("BIN REDUCER: depthsetsize: "+depthSet.size()+" bafsetsize: "+bafSet.size()+" median depth: "+medianDepth+" median baf: "+medianBaf);
     // for median depth
-    retText.set(Integer.toString(startbp)+"\t"+Integer.toString(endbp)+"\t"+Double.toString(mean_depth)+"\t"+Double.toString(mean_baf)+"\t"+Double.toString(total_depth)+"\t"+Integer.toString(n));
-    //retText.set(Integer.toString(startbp)+"\t"+Integer.toString(endbp)+"\t"+Double.toString(medianDepth)+"\t"+Integer.toString(hets)+"\t"+Double.toString(total_depth)+"\t"+Integer.toString(n));
+    //retText.set(Integer.toString(startbp)+"\t"+Integer.toString(endbp)+"\t"+Double.toString(mean_depth) +"\t"+Double.toString(mean_baf) +"\t"+Double.toString(total_depth)+"\t"+Integer.toString(n));
+    retText.set(Integer.toString(startbp)+"\t"+Integer.toString(endbp)+"\t"+Double.toString(medianDepth)+"\t"+Double.toString(medianBaf)+"\t"+Double.toString(total_depth)+"\t"+Integer.toString(n));
     ctx.write(inkey, retText);
   }
 }
@@ -158,9 +167,9 @@ extends Reducer<RefBinKey,ArrayPrimitiveWritable,
   RefPosBaseKey refPosBaseKey = null;
   DoubleWritable doubleWritable = null;
   List<Map<Integer,Double> > qualitymap_list = null;
+  int bin_size = Constants.read_bin_width;
  
   public AlleleDepthWindowReducer(){
-    int bin_size = Constants.read_bin_width;
     refPosBaseKey = new RefPosBaseKey();
     doubleWritable = new DoubleWritable();
     qualitymap_list = new ArrayList<Map<Integer,Double> >(bin_size);
@@ -172,6 +181,10 @@ extends Reducer<RefBinKey,ArrayPrimitiveWritable,
   }
   @Override protected void reduce(RefBinKey inkey,Iterable<ArrayPrimitiveWritable> invals, Reducer<RefBinKey,ArrayPrimitiveWritable, RefPosBaseKey,DoubleWritable>.Context ctx)
     throws InterruptedException, IOException{
+      for(int i=0;i<bin_size;++i){
+        qualitymap_list.set(i,null);
+      }
+      boolean debug = false;
       int bin_size = Constants.read_bin_width;
       refPosBaseKey.setRefName(inkey.getRefName());
       //refPosBaseKey.setBase(1);
@@ -184,15 +197,21 @@ if(true){
       Iterator<ArrayPrimitiveWritable> it = invals.iterator();
       //double sum = 0.;
       double quality_threshold=Constants.base_quality_threshold;
+      int reduce_list_size = 0;
       while(it.hasNext()){
         //sum+= it.next().get();
+        if(debug)System.err.print("KEY:"+inkey.toString());
         byte[] base_info = (byte[])it.next().get();
         for(int i=0;i<bin_size;++i){
           int allele = (int)base_info[i*2];
           int basequal =  (int)base_info[i*2+1];
-          if(allele>0){
+          if(allele==0){
+            if(debug)System.err.print(" 00");
+          }else{
+            if(debug)System.err.print(" "+allele);
             double qual = 1.-Math.pow(10,-basequal*.1);
             if(qual > quality_threshold){
+              //qual = 1.0;
               Map<Integer,Double> map = qualitymap_list.get(i);
               Double val = null ;
               if(map==null) {
@@ -208,6 +227,8 @@ if(true){
         
           }
         }
+        if(debug)System.err.println();
+        ++reduce_list_size;
       }      
       for(int i=0;i<bin_size;++i){
         Map<Integer,Double> map = qualitymap_list.get(i);
@@ -220,9 +241,11 @@ if(true){
             Map.Entry<Integer,Double> entry = it2.next();
             Integer allele = entry.getKey();
             Double depth = entry.getValue();
+            //depth = (double)reduce_list_size;
             refPosBaseKey.setBase(allele);
             doubleWritable.set(depth);
             ctx.write(refPosBaseKey,doubleWritable);  
+            if(debug) System.err.println("EMIT: "+refPosBaseKey.toString()+" "+allele+" "+depth);
           }
         }
       }

@@ -31,16 +31,18 @@ extends Mapper<LongWritable,Text,
                                Mapper<LongWritable,Text,
                                RefBinKey,Text>.Context ctx)
     throws InterruptedException, IOException{
+      boolean debug = false;
       String []parts = inval.toString().split("\t");
       String refname = parts[0];
-      //System.err.println("Bin length value: "+Constants.bin_width);
-      int bin = (int)(Integer.parseInt(parts[1])/Constants.bin_width);
+      if(debug)System.err.println("Bin length value: "+Constants.bin_width);
+      int bp = Integer.parseInt(parts[1]);
+      int bin = (int)(bp/Constants.bin_width) * Constants.bin_width;
       String binMapValue = StringUtils.join(parts,"\t",1,4);
       refBinKey.setRefName(refname);
       refBinKey.setBin(bin);
       newVal.set(binMapValue);
+      if(debug)System.err.println("Emitting:"+refBinKey.toString()+":"+newVal.toString());
       ctx.write(refBinKey,newVal);  
-     
     }
 }
 
@@ -152,6 +154,7 @@ extends Mapper<LongWritable,SAMRecordWritable,
                                Mapper<LongWritable,SAMRecordWritable,
                                RefBinKey,ArrayPrimitiveWritable>.Context ctx)
     throws InterruptedException, IOException{
+      boolean debug = false;
       RefBinKey refBinKey = new RefBinKey();
       ArrayPrimitiveWritable arrayPrimitiveWritable = 
       new ArrayPrimitiveWritable();
@@ -163,8 +166,8 @@ extends Mapper<LongWritable,SAMRecordWritable,
       String refname = samrecord.getReferenceName();
       refBinKey.setRefName(refname);
       String samstr = samrecord.getSAMString();
-      //System.err.println("SAMSTRING: "+samstr);
-      //System.err.println(" readlen: "+samrecord.getReadLength());
+      if(debug)System.err.println("SAMSTRING: "+samstr);
+      if(debug)System.err.println(" readlen: "+samrecord.getReadLength());
       byte[] bases = samrecord.getReadBases();
       byte[] basequals = samrecord.getBaseQualities();
       int mapqual = samrecord.getMappingQuality();
@@ -184,16 +187,19 @@ extends Mapper<LongWritable,SAMRecordWritable,
         }
         while(it.hasNext()){
           AlignmentBlock alignmentBlock = it.next();
-          //System.err.println("  block start "+alignmentBlock.getReferenceStart()+"("+alignmentBlock.getReadStart()+") with length "+alignmentBlock.getLength());
           int refstart = alignmentBlock.getReferenceStart();
           int readstart = alignmentBlock.getReadStart();
           int readstart0 = readstart-1;
           int alignlen = alignmentBlock.getLength();
           //char []basechars = new char[alignlen];
-          int last_bin = -1,current_bin = 0;
+          int last_bin = -1;
+          int current_bin = 0;
+          int refpos_1 = 1;
+          int refpos_0 = 0;
           for(int i=0;i<alignlen;++i){
-            int refpos_1 = refstart + i;
-            int refpos_0 = readstart0 + refpos_1-1;
+            refpos_1 = refstart + i;
+            refpos_0 = refpos_1-1;
+            if(debug)System.err.println(" ref_start "+refstart+" readstart "+readstart+" refpos_0:"+refpos_0);
             // the current bin
             current_bin = (int)(refpos_0/bin_size)*bin_size;
             //int current_refpos = refpos_0 % bin_size;
@@ -201,10 +207,10 @@ extends Mapper<LongWritable,SAMRecordWritable,
               if(last_bin!=-1){
                 // we have already populated at least one bin so output it
                 // Remember that this current bin is zero-based indexed!
-                refBinKey.setBin(current_bin);
+                refBinKey.setBin(last_bin);
                 arrayPrimitiveWritable.set(read_info);
                 ctx.write(refBinKey,arrayPrimitiveWritable);  
-                //System.err.println("Emitting");
+                if(debug)System.err.println(" Emitting "+refBinKey.toString()+" currentpos "+refpos_0);
               }
               for(int j=0;j<bin_size;++j){
                 read_info[j*2] = 0;
@@ -217,26 +223,19 @@ extends Mapper<LongWritable,SAMRecordWritable,
               int base = (int)bases[read_pos_index];
               //basechars[i] = (char)base;
               int basequal = (int)basequals[read_pos_index];
-              //System.err.println("Last "+last_bin+" Current bin "+current_bin+" Storing "+(int)bases[read_pos_index]+" of position "+read_pos_index+" into "+((refpos_0)%bin_size)* 2);
+              if(debug)System.err.println(" Storing "+(int)bases[read_pos_index]+" of position "+read_pos_index+" into "+((refpos_0)%bin_size)* 2);
               read_info[((refpos_0)%bin_size)* 2] = bases[read_pos_index];
               read_info[((refpos_0)%bin_size)* 2+1] = basequals[read_pos_index];
-              //double baseprob = 1.-Math.pow(10,-basequal*.1);
-              //System.err.println(" base "+base+" quality: "+(1.-Math.pow(10,-basequal*.1)));
-              //double fullprob = mapprob;
-              //double fullprob = mapprob*baseprob;
-              //if(fullprob>.99) {
-                //ctx.write(new RefPosBaseKey(refname,refstart+i,base),new DoubleWritable(fullprob));  
-              //}
             }
             last_bin = current_bin;
           }
           if(last_bin!=-1){
             // we have already populated at least one bin so output it
             // Remember that this current bin is zero-based indexed!
-            refBinKey.setBin(current_bin);
+            refBinKey.setBin(last_bin);
             arrayPrimitiveWritable.set(read_info);
+            if(debug)System.err.println(" Last emitting "+refBinKey.toString()+" current "+refpos_0);
             ctx.write(refBinKey,arrayPrimitiveWritable);  
-            //System.err.println("Emitting last");
           }
         }
       }

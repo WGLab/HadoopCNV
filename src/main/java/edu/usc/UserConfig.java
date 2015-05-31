@@ -43,6 +43,10 @@ public class UserConfig{
     return Boolean.parseBoolean(getConfig("RUN_CNV_CALLER"));
   }
 
+  public static boolean getRunGlobalSort(){
+    return Boolean.parseBoolean(getConfig("RUN_GLOBAL_SORT"));
+  }
+
   public static int getBamFileReducers(){
     return Integer.parseInt(getConfig("BAM_FILE_REDUCERS"));
   }

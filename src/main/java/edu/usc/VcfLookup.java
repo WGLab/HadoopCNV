@@ -7,7 +7,9 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.io.IOException;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -31,6 +33,7 @@ import org.apache.hadoop.fs.FileSystem;
 public class VcfLookup{
 
   public static final String SER_FILE="vcf.ser";
+  public static final String TXT_FILE="workdir/depth/vcf.txt";
   
   private static volatile HashMap<String,HashSet<Integer>> hashMapSet = new HashMap<String,HashSet<Integer>>();
   private static volatile boolean hashMapSetInitialized = false;
@@ -109,11 +112,42 @@ public class VcfLookup{
     }
     reader.close();
     FileSystem fileSystem = FileSystem.get(new Configuration());
+    fileSystem.delete(new Path(SER_FILE),true);
     Path path = new Path(SER_FILE);
     ObjectOutputStream oos = new ObjectOutputStream(fileSystem.create(path));
     oos.writeObject(hashMapSet);
     oos.close();
     System.err.println("VCF file parsed, and serialized object persisted");
+  }
+
+  public void parseVcf2Text(String infile)throws IOException{
+    //hashMapSet.clear();
+    BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(infile)));
+    String line;
+    //String lastChr = "";
+    FileSystem fileSystem = FileSystem.get(new Configuration());
+    fileSystem.delete(new Path(TXT_FILE),true);
+    Path path = new Path(TXT_FILE);
+    BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(fileSystem.create(path)));
+    while((line=reader.readLine())!=null){
+      if (line.charAt(0)!='#'){
+        //int index0 = 0;
+        //int index1 = line.indexOf((int)'\t',index0+1);
+        //int index2 = line.indexOf((int)'\t',index1+1);
+        //String ref = line.substring(index0,index1);
+        //String pos = line.substring(index1+1,index2);
+        String parts[] = line.split("\t");
+        String ref = parts[0];
+        String pos = parts[1];
+        writer.write(ref+"\t"+pos+"\t0\t0\n");
+        //writer.write(parts[0]+"\t"+parts[1]+"\t0\t0\n");
+        //System.out.println(parts[0]+" "+parts[1]);
+        //insertKeyValue(ref,Integer.parseInt(pos));
+      }
+    }
+    reader.close();
+    writer.close();
+    System.err.println("VCF file parsed, and txt object persisted");
   }
 
   public void testRead() throws IOException,ClassNotFoundException{

@@ -11,7 +11,7 @@ public class Constants{
   public static final double base_quality_threshold = .99;
 
   // Binner settings
-  public static final int bin_width = 1;
+  public static final int bin_width = 10000;
 
   // HMM settings 
   // Penalties are non-negative. For negative penalties, 

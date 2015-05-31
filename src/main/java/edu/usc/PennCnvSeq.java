@@ -55,16 +55,8 @@ implements Tool{
       boolean runDepthCallJob = UserConfig.getRunDepthCaller();
       boolean runRegionBinJob = UserConfig.getRunBinner();
       boolean runCnvCallJob = UserConfig.getRunCnvCaller();
-      boolean runGlobalSortJob = false;
+      boolean runGlobalSortJob = UserConfig.getRunGlobalSort();
       fileSystem = FileSystem.get(conf);
-      if(runVcfLookup){
-        this.vcffileStr = UserConfig.getVcfFile();
-        this.vcffile = new Path(vcffileStr);
-        System.out.println("Vcffile is at "+vcffile);
-        VcfLookup lookup = new VcfLookup();
-        lookup.parseVcf(vcffileStr);
-        //lookup.readObject();
-      }
       if(runDepthCallJob){
         //conf.setInt("dfs.blocksize",512*1024*1024);
         //conf.set("yarn.scheduler.minimum-allocation-mb",UserConfig.getYarnContainerMinMb());
@@ -113,6 +105,47 @@ implements Tool{
           return -1;
         }
       }
+      if(runGlobalSortJob){
+        int numReduceTasks = numReduceTasksSmall;
+        double pcnt = 10.0;
+        int numSamples = numReduceTasks;
+        int maxSplits = numReduceTasks - 1;
+        if (0 >= maxSplits)
+          maxSplits = Integer.MAX_VALUE;
+        InputSampler.Sampler sampler = new InputSampler.RandomSampler(pcnt, numSamples, maxSplits);
+  
+        Job regionSortJob = new Job(conf);
+        regionSortJob.setJobName("sorter");
+        regionSortJob.setJarByClass(PennCnvSeq.class);
+        regionSortJob.setNumReduceTasks(numReduceTasks);
+        regionSortJob.setInputFormatClass(SortInputFormat.class);
+        regionSortJob.setMapperClass(Mapper.class);
+        regionSortJob.setMapOutputKeyClass(RefPosBaseKey.class);
+        regionSortJob.setMapOutputValueClass(Text.class);
+        regionSortJob.setReducerClass(Reducer.class);
+        regionSortJob.setOutputKeyClass(RefPosBaseKey.class);
+        regionSortJob.setOutputValueClass (Text.class);
+        FileInputFormat.addInputPath(regionSortJob,new Path("workdir/depth/"));
+        fileSystem.delete(new Path("workdir/sorted"),true);
+        FileOutputFormat.setOutputPath(regionSortJob,new Path("workdir/sorted/"));
+        regionSortJob.setPartitionerClass(TotalOrderPartitioner.class);
+        TotalOrderPartitioner.setPartitionFile(regionSortJob.getConfiguration(),new Path("workdir/partitioning"));
+        InputSampler.writePartitionFile(regionSortJob, sampler);
+        System.out.println("Submitting global sort.");
+        if (!regionSortJob.waitForCompletion(true)) {
+          System.out.println("Global sort failed.");
+          return 1;
+        }
+      }
+      if(runVcfLookup){
+        this.vcffileStr = UserConfig.getVcfFile();
+        this.vcffile = new Path(vcffileStr);
+        System.out.println("Vcffile is at "+vcffile);
+        VcfLookup lookup = new VcfLookup();
+        lookup.parseVcf2Text(vcffileStr);
+        //lookup.parseVcf(vcffileStr);
+        //lookup.readObject();
+      }
       if(runRegionBinJob){
         Job regionBinJob = new Job(conf);
         regionBinJob.setJobName("binner");
@@ -126,6 +159,7 @@ implements Tool{
         regionBinJob.setOutputKeyClass(RefBinKey.class);
         regionBinJob.setOutputValueClass (Text.class);
   
+        //FileInputFormat.addInputPath(regionBinJob,new Path("workdir/depth_nowindow/"));
         FileInputFormat.addInputPath(regionBinJob,new Path("workdir/depth/"));
         fileSystem.delete(new Path("workdir/bins"),true);
         FileOutputFormat.setOutputPath(regionBinJob,new Path("workdir/bins"));
@@ -159,37 +193,6 @@ implements Tool{
         if (!secondarySortJob.waitForCompletion(true)) {
           System.out.println("CNV caller failed.");
           return -1;
-        }
-      }
-      if(runGlobalSortJob){
-        int numReduceTasks = numReduceTasksSmall;
-        double pcnt = 10.0;
-        int numSamples = numReduceTasks;
-        int maxSplits = numReduceTasks - 1;
-        if (0 >= maxSplits)
-          maxSplits = Integer.MAX_VALUE;
-        InputSampler.Sampler sampler = new InputSampler.RandomSampler(pcnt, numSamples, maxSplits);
-  
-        Job regionSortJob = new Job(conf);
-        regionSortJob.setJobName("sorter");
-        regionSortJob.setJarByClass(PennCnvSeq.class);
-        regionSortJob.setNumReduceTasks(numReduceTasks);
-        regionSortJob.setInputFormatClass(SortInputFormat.class);
-        regionSortJob.setMapperClass(Mapper.class);
-        regionSortJob.setMapOutputKeyClass(RefPosBaseKey.class);
-        regionSortJob.setMapOutputValueClass(Text.class);
-        regionSortJob.setReducerClass(Reducer.class);
-        regionSortJob.setOutputKeyClass(RefPosBaseKey.class);
-        regionSortJob.setOutputValueClass (Text.class);
-        FileInputFormat.addInputPath(regionSortJob,new Path("workdir/depth/"));
-        FileOutputFormat.setOutputPath(regionSortJob,new Path("workdir/sorted/"));
-        regionSortJob.setPartitionerClass(TotalOrderPartitioner.class);
-        TotalOrderPartitioner.setPartitionFile(regionSortJob.getConfiguration(),new Path("workdir/partitioning"));
-        InputSampler.writePartitionFile(regionSortJob, sampler);
-        System.out.println("Submitting global sort.");
-        if (!regionSortJob.waitForCompletion(true)) {
-          System.out.println("Global sort failed.");
-          return 1;
         }
       }
     }catch(IOException ex){
