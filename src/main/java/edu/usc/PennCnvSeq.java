@@ -24,6 +24,14 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.seqdoop.hadoop_bam.AnySAMInputFormat;
 
+/**
+ * PennCnvSeq is the entry point for the Hadoop based implementation of
+ * the PennCnvSeq program. PennCnvSeq expects a single argument, which is the 
+ * name of the configuration file that specifiees where the VCF and BAM files
+ * are, and which components of the pipeline to run.
+ * @author Gary Chen
+ */
+
 public class PennCnvSeq
 extends Configured
 implements Tool{
@@ -32,9 +40,21 @@ implements Tool{
   Path bamfile,vcffile;
   String bamfileStr,vcffileStr;
   
+
+/** 
+ * The default constructor for PennCvnSeq. No other initializations occur here.
+ */
+
   public PennCnvSeq(){
   }
 
+/**
+ * This method implements the same method specified in the Tool interface
+ * It takes in the necessary user specified arguments, ignoring Hadoop
+ * arguments such as the jar file name.
+ * @param args	the String array that was passed in to the main function
+ * @return	The exit code
+ */
   @Override
   public int run(String args[]){
     for(int i=0;i<args.length;++i) System.out.println("Argument "+i+": "+args[i]);

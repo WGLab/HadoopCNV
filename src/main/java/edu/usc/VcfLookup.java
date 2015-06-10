@@ -1,6 +1,6 @@
 package edu.usc;
 
-import sun.management.VMManagement;
+//import sun.management.VMManagement;
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
 import java.lang.reflect.Field;
@@ -42,25 +42,35 @@ public class VcfLookup{
   }
  
  
+/**
+ * Check to see if a particular SNP exists in the tree structure
+ * @param key The chromosome
+ * @param value The base pair position
+ * @return true or false
+ */
   public boolean exists(String key, int value){
     HashSet<Integer> hashSet = hashMapSet.get(key);
     if(hashSet==null) return false;
     return hashSet.contains(value);    
   }
 
+/**
+ * Deserializes the tree structure from HDFS into memory
+ */
+
   public synchronized void readObject(){
-    try {
-      RuntimeMXBean runtimeMXBean = ManagementFactory.getRuntimeMXBean();
-      Field jvmField = runtimeMXBean.getClass().getDeclaredField("jvm");
-      jvmField.setAccessible(true);
-      VMManagement vmManagement = (VMManagement) jvmField.get(runtimeMXBean);
-      Method getProcessIdMethod = vmManagement.getClass().getDeclaredMethod("getProcessId");
-      getProcessIdMethod.setAccessible(true);
-      Integer processId = (Integer) getProcessIdMethod.invoke(vmManagement);
-      System.out.println("################    ProcessId = " + processId);
-    }catch (Exception e) {
-      e.printStackTrace();
-    }
+//    try {
+//      RuntimeMXBean runtimeMXBean = ManagementFactory.getRuntimeMXBean();
+//      Field jvmField = runtimeMXBean.getClass().getDeclaredField("jvm");
+//      jvmField.setAccessible(true);
+//      VMManagement vmManagement = (VMManagement) jvmField.get(runtimeMXBean);
+//      Method getProcessIdMethod = vmManagement.getClass().getDeclaredMethod("getProcessId");
+//      getProcessIdMethod.setAccessible(true);
+//      Integer processId = (Integer) getProcessIdMethod.invoke(vmManagement);
+//      System.out.println("################    ProcessId = " + processId);
+//    }catch (Exception e) {
+//      e.printStackTrace();
+//    }
     System.err.println("Entering readObject");
     if(hashMapSetInitialized){
       System.err.println("Exiting readObject early");
@@ -90,6 +100,11 @@ public class VcfLookup{
     hashMapSetInitialized = true;
   }
 
+/**
+ * Insert a datapoint into the tree structure
+ * @param key The chromosome
+ * @param value the position
+ */
 
   public void insertKeyValue(String key, int value){
     HashSet<Integer> hashSet = hashMapSet.get(key);
@@ -97,6 +112,12 @@ public class VcfLookup{
     hashSet.add(value);
     hashMapSet.put(key,hashSet);
   }
+
+/**
+ * Parses a VCF file from the local file system and creates an in-memory
+ * tree structure. It also serializes this tree to HDFS
+ * @param infile The local file path of the VCF file
+ */
   
   public void parseVcf(String infile)throws IOException{
     //hashMapSet.clear();
@@ -119,6 +140,15 @@ public class VcfLookup{
     oos.close();
     System.err.println("VCF file parsed, and serialized object persisted");
   }
+
+/**
+ * Parses a VCF from local file system and stores a tab-delimited file
+ * in HDFS at /user/<homedir>/workdir/depth. The Depth call reducers also
+ * write to this path. The Mapper for the Binner can then determine which sites
+ * are SNPs as the intersection of the VCF file and the output of the Depth call
+ * reducers.
+ * @param infile The local file path of the VCF
+ */
 
   public void parseVcf2Text(String infile)throws IOException{
     //hashMapSet.clear();

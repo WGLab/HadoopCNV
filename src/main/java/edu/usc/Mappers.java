@@ -13,20 +13,32 @@ import htsjdk.samtools.SAMRecord;
 import htsjdk.samtools.AlignmentBlock;
 import org.seqdoop.hadoop_bam.SAMRecordWritable;
 
+/**
+ * Placeholder class for Mappers. Currently no functionality here.
+ */
+
 public class Mappers{
-  // we can put any common utilities in here
 }
 
+/**
+ * This is the Mapper for grouping output from the Depth Caller
+ * into bins. It specifically assigns a bin ID for all bases that map
+ * to a bin.
+ */
 class BinMapper
 extends Mapper<LongWritable,Text,
                RefBinKey,Text> {
 
-  // this is the hard-coded length of the bin size
 
   private final RefBinKey refBinKey = new RefBinKey();
-
-
   private final Text newVal = new Text();
+
+/**
+ * @param inkey A sequence ID for the text input
+ * @param inval A text record consisting of Chr, base pair, allele, and depth
+ * @param ctx a handle to the Mapper context
+ */
+
   @Override protected void map(LongWritable inkey,Text inval,
                                Mapper<LongWritable,Text,
                                RefBinKey,Text>.Context ctx)
@@ -46,118 +58,161 @@ extends Mapper<LongWritable,Text,
     }
 }
 
-class BinSortMapper
-extends Mapper<LongWritable,Text,
-               RefBinKey,Text> {
-  private final Text newVal = new Text();
-  @Override protected void map(LongWritable inkey,Text inval,
-                               Mapper<LongWritable,Text,
-                               RefBinKey,Text>.Context ctx)
-    throws InterruptedException, IOException{
-      String []parts = inval.toString().split("\t");
-      String refname = parts[0];
-      int bin = Integer.parseInt(parts[1]);
-      String value = StringUtils.join(parts,"\t",2,parts.length);
-      //System.err.println("BinMap value: "+binMapValue);
-      newVal.set(value);
-      ctx.write(new RefBinKey(refname,bin),newVal);  
-     
-    }
-}
 
-
-class SAMRecordMapper
-extends Mapper<LongWritable,SAMRecordWritable,
-               RefPosBaseKey,DoubleWritable> {
-
-  //VcfLookup lookup = null;
-  RefPosBaseKey refPosBaseKey = null;
-  DoubleWritable doubleWritable = null;
-  public SAMRecordMapper(){
-    //lookup = new VcfLookup();
-    //lookup.readObject();
-    refPosBaseKey = new RefPosBaseKey();
-    doubleWritable = new DoubleWritable();
-  }
-
-  @Override protected void map(LongWritable inkey,SAMRecordWritable inval,
-                               Mapper<LongWritable,SAMRecordWritable,
-                               RefPosBaseKey,DoubleWritable>.Context ctx)
-    throws InterruptedException, IOException{
-      SAMRecord samrecord = inval.get();    
-      String refname = samrecord.getReferenceName();
-      refPosBaseKey.setRefName(refname);
-      //String samstr = samrecord.getSAMString();
-      //System.err.println("SAMSTRING: "+samstr);
-      //System.err.println(" readlen: "+samrecord.getReadLength());
-      byte[] bases = samrecord.getReadBases();
-      byte[] basequals = samrecord.getBaseQualities();
-      int mapqual = samrecord.getMappingQuality();
-      double mapprob = 1.-Math.pow(10,-mapqual*.1);
-      if(mapprob>Constants.mapping_quality_threshold){
-        //System.err.println(" mapquality "+mapprob);
-        //System.err.println(" bytelen: "+bases.length);
-        //System.err.println(" first base: "+Byte.toString(bases[0]));
-        //System.err.println(" cigar: "+samrecord.getCigar().toString());
-        //System.err.println(" quality: "+samrecord.getMappingQuality());
-        List<AlignmentBlock> alignmentBlockList = samrecord.getAlignmentBlocks();
-        Iterator<AlignmentBlock> it = alignmentBlockList.iterator();
-        while(it.hasNext()){
-          AlignmentBlock alignmentBlock = it.next();
-          //System.err.println("  block start "+alignmentBlock.getReferenceStart()+"("+alignmentBlock.getReadStart()+") with length "+alignmentBlock.getLength());
-          int refstart = alignmentBlock.getReferenceStart();
-          int readstart = alignmentBlock.getReadStart();
-          int alignlen = alignmentBlock.getLength();
-          //char []basechars = new char[alignlen];
-          for(int i=0;i<alignlen;++i){
-            int refpos = refstart + i;
-            if(true){
-            //if(lookup.exists(refname,refpos)){
-            // Let's break up the string into chunks of 10
-            //if(refpos % PennCnvSeq.base_spacing == 0){
-              int base = (int)bases[readstart+i-1];
-              //basechars[i] = (char)base;
-              int basequal = (int)basequals[readstart+i-1];
-              double baseprob = 1.-Math.pow(10,-basequal*.1);
-              //System.err.println(" base "+base+" quality: "+(1.-Math.pow(10,-basequal*.1)));
-              double fullprob = mapprob;
-              //double fullprob = mapprob*baseprob;
-              if(baseprob>.99) {
-                refPosBaseKey.setPosition(refstart+i);
-                refPosBaseKey.setBase(base);
-                doubleWritable.set(fullprob);
-                ctx.write(refPosBaseKey,doubleWritable);
-              }
-            }
-          }
-        }
-      }
-    }
-}
-
-
-// this version uses an array that roughly is the size of reads with
-// the hope that there are less maps and reduces to do
+//class BinSortMapper
+//extends Mapper<LongWritable,Text,
+//               RefBinKey,Text> {
+//  private final Text newVal = new Text();
 //
+//  @Override protected void map(LongWritable inkey,Text inval,
+//                               Mapper<LongWritable,Text,
+//                               RefBinKey,Text>.Context ctx)
+//    throws InterruptedException, IOException{
+//      String []parts = inval.toString().split("\t");
+//      String refname = parts[0];
+//      int bin = Integer.parseInt(parts[1]);
+//      String value = StringUtils.join(parts,"\t",2,parts.length);
+//      //System.err.println("BinMap value: "+binMapValue);
+//      newVal.set(value);
+//      ctx.write(new RefBinKey(refname,bin),newVal);  
+//    }
+//}
+
+///**
+// * This is the Mapper of the naive Depth Caller that computes an expected
+// * depth based on the 0-1 range value of the quality score, converted from
+// * a phred score
+// * This version is considerably slower than SAMRecordWindowMapper
+// * Caller.
+// */
+//
+//class SAMRecordMapper
+//extends Mapper<LongWritable,SAMRecordWritable,
+//               RefPosBaseKey,DoubleWritable> {
+//
+//  //VcfLookup lookup = null;
+//  private RefPosBaseKey refPosBaseKey = null;
+//  private DoubleWritable doubleWritable = null;
+//  public SAMRecordMapper(){
+//    //lookup = new VcfLookup();
+//    //lookup.readObject();
+//    refPosBaseKey = new RefPosBaseKey();
+//    doubleWritable = new DoubleWritable();
+//  }
+//
+///**
+// * Input splits from a BAM file are provided by the Hadoop-BAM library.
+// * These come in the form of SAMRecord objects, which have functions for 
+// * extracting properties of each read. What is output by this mapper
+// * is a key-value pair where the key is composite key consisiting of the
+// * Chromosome, the base pair position, and the allele (integer). The value is
+// * a floating point value of the quality score, converted by the phred score
+// * @param inkey A long integer which is basically a sequence in the BAM file
+// * @param inval A single SAM record
+// * @param ctx The mapper context. Used as a handle to write output to the 
+// * Hadoop framework.
+// */
+//
+//  @Override protected void map(LongWritable inkey,SAMRecordWritable inval,
+//                               Mapper<LongWritable,SAMRecordWritable,
+//                               RefPosBaseKey,DoubleWritable>.Context ctx)
+//    throws InterruptedException, IOException{
+//      SAMRecord samrecord = inval.get();    
+//      String refname = samrecord.getReferenceName();
+//      refPosBaseKey.setRefName(refname);
+//      //String samstr = samrecord.getSAMString();
+//      //System.err.println("SAMSTRING: "+samstr);
+//      //System.err.println(" readlen: "+samrecord.getReadLength());
+//      byte[] bases = samrecord.getReadBases();
+//      byte[] basequals = samrecord.getBaseQualities();
+//      int mapqual = samrecord.getMappingQuality();
+//      double mapprob = 1.-Math.pow(10,-mapqual*.1);
+//      if(mapprob>Constants.mapping_quality_threshold){
+//        //System.err.println(" mapquality "+mapprob);
+//        //System.err.println(" bytelen: "+bases.length);
+//        //System.err.println(" first base: "+Byte.toString(bases[0]));
+//        //System.err.println(" cigar: "+samrecord.getCigar().toString());
+//        //System.err.println(" quality: "+samrecord.getMappingQuality());
+//        List<AlignmentBlock> alignmentBlockList = samrecord.getAlignmentBlocks();
+//        Iterator<AlignmentBlock> it = alignmentBlockList.iterator();
+//        while(it.hasNext()){
+//          AlignmentBlock alignmentBlock = it.next();
+//          //System.err.println("  block start "+alignmentBlock.getReferenceStart()+"("+alignmentBlock.getReadStart()+") with length "+alignmentBlock.getLength());
+//          int refstart = alignmentBlock.getReferenceStart();
+//          int readstart = alignmentBlock.getReadStart();
+//          int alignlen = alignmentBlock.getLength();
+//          //char []basechars = new char[alignlen];
+//          for(int i=0;i<alignlen;++i){
+//            int refpos = refstart + i;
+//            if(true){
+//            //if(lookup.exists(refname,refpos)){
+//            // Let's break up the string into chunks of 10
+//            //if(refpos % PennCnvSeq.base_spacing == 0){
+//              int base = (int)bases[readstart+i-1];
+//              //basechars[i] = (char)base;
+//              int basequal = (int)basequals[readstart+i-1];
+//              double baseprob = 1.-Math.pow(10,-basequal*.1);
+//              //System.err.println(" base "+base+" quality: "+(1.-Math.pow(10,-basequal*.1)));
+//              double fullprob = mapprob;
+//              //double fullprob = mapprob*baseprob;
+//              if(baseprob>.99) {
+//                refPosBaseKey.setPosition(refstart+i);
+//                refPosBaseKey.setBase(base);
+//                doubleWritable.set(fullprob);
+//                ctx.write(refPosBaseKey,doubleWritable);
+//              }
+//            }
+//          }
+//        }
+//      }
+//    }
+//}
+
+
+/**
+ * This is the Mapper of the Depth Caller that uses a fixed length view of 
+ * the reads that overlap within the range of the view. To set the view width
+ * configure this value in the Constants.java
+ * @see Constants
+ * This version is considerably faster than the naive version of the Depth
+ * Caller.
+ */
+
 class SAMRecordWindowMapper
 extends Mapper<LongWritable,SAMRecordWritable,
                RefBinKey,ArrayPrimitiveWritable> {
+  private RefBinKey refBinKey = null; 
+  private ArrayPrimitiveWritable arrayPrimitiveWritable = null; 
+  private int bin_size = Constants.read_bin_width;
+  private byte[] read_info = null;
 
-  // VcfLookup is an in-memory HashMap of variants to filter for
-  // VcfLookup lookup = null;
   public SAMRecordWindowMapper(){
-    //lookup = new VcfLookup();
-    //lookup.readObject();
+    refBinKey = new RefBinKey();
+    arrayPrimitiveWritable = new ArrayPrimitiveWritable();
+    read_info = new byte[bin_size*2];
   }
+
+/**
+ * Input splits from a BAM file are provided by the Hadoop-BAM library.
+ * These come in the form of SAMRecord objects, which have functions for 
+ * extracting properties of each read. What is output by this mapper
+ * is a key-value pair where the key is composite key consisiting of the
+ * Chromosome and the first base pair coordinate of the view. The value is
+ * a 2N length byte array (N being the width of the view), where elements
+ * 0,2,4,...,N-2 store the 1 byte integer value of the allele at positions 
+ * 1,2,3,...,N-1, and elements 1,3,5,...,N-1 store the 1-byte integer value
+ * of the phred quality scores of the allele in the left adjacent element.
+ * @param inkey A long integer which is basically a sequence in the BAM file
+ * @param inval A single SAM record
+ * @param ctx The mapper context. Used as a handle to write output to the 
+ * Hadoop framework.
+ */
 
   @Override protected void map(LongWritable inkey,SAMRecordWritable inval,
                                Mapper<LongWritable,SAMRecordWritable,
                                RefBinKey,ArrayPrimitiveWritable>.Context ctx)
     throws InterruptedException, IOException{
       boolean debug = false;
-      RefBinKey refBinKey = new RefBinKey();
-      ArrayPrimitiveWritable arrayPrimitiveWritable = 
-      new ArrayPrimitiveWritable();
  
       // use the bin size to output fragments of reads in 
       // regular intervals
@@ -180,7 +235,6 @@ extends Mapper<LongWritable,SAMRecordWritable,
       if(mapprob>Constants.mapping_quality_threshold){
         List<AlignmentBlock> alignmentBlockList = samrecord.getAlignmentBlocks();
         Iterator<AlignmentBlock> it = alignmentBlockList.iterator();
-        byte[] read_info = new byte[bin_size*2];
         for(int j=0;j<bin_size;++j){
           read_info[j*2] = 0;
           read_info[j*2+1] = 0;
@@ -191,7 +245,6 @@ extends Mapper<LongWritable,SAMRecordWritable,
           int readstart = alignmentBlock.getReadStart();
           int readstart0 = readstart-1;
           int alignlen = alignmentBlock.getLength();
-          //char []basechars = new char[alignlen];
           int last_bin = -1;
           int current_bin = 0;
           int refpos_1 = 1;

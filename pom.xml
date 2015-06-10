@@ -25,6 +25,16 @@
     <build>
       <outputDirectory>target/classes</outputDirectory>
       <plugins>
+
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-javadoc-plugin</artifactId>
+          <version>2.10.3</version>
+          <configuration>
+            <show>package</show>
+          </configuration>
+        </plugin>
+
         <plugin>
           <!-- Build an executable JAR -->
           <groupId>org.apache.maven.plugins</groupId>

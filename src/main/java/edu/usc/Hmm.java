@@ -19,6 +19,13 @@ import java.util.Arrays;
 
 import org.apache.hadoop.io.Text;
 
+
+/**
+ * This is the class that runs a Viterbi scoring CNV calling algorithm
+ * on intensity signals over a Chromosome length region. It is intended
+ * to be called by the Hadoop framework, but can be easily unit tested by
+ * calling the main function.
+ */
 public class Hmm{
   private String refName;
   private final int states = 4;
@@ -26,6 +33,7 @@ public class Hmm{
   private int [] ranges;
   private float [] data;
   private float [] lrr_mat;
+  private float [] mse_mat;
   private float [] baf_mat;
   private float [] loss_mat;
   private float [] scaled_depth;
@@ -46,17 +54,30 @@ public class Hmm{
   public Hmm(int markers){
     this.markers = markers;
   }
+
   public Hmm(){
   }
 
+/**
+ * Set the mixing proportion alpha.
+ * @see Constants
+ */
   public void setAlpha(float alpha){
     this.alpha = alpha;
   }
 
+/**
+ * Set the copy number 2 penalty
+ * @see Constants
+ */
   public void setLambda1(float lambda1){
     this.lambda1 = lambda1;
   }
 
+/**
+ * Set the transition penalty
+ * @see Constants
+ */
   public void setLambda2(float lambda2){
     this.lambda2 = lambda2;
   }
@@ -105,6 +126,16 @@ public class Hmm{
     }
     
   }
+
+  private void rescale(float mat[],int row){
+    float sum = 0f;
+    for(int state=0;state<states;++state){
+      sum+=mat[row*states+state];
+    }
+    for(int state=0;state<states;++state){
+      mat[row*states+state]/=sum;
+    }
+  }
   
   private void compute_emission(){
     if(markers<2) return;
@@ -114,20 +145,28 @@ public class Hmm{
       for(int state=0;state<states;++state){
         float dev = scaled_depth[i] - mu[state];
         lrr_mat[i*states+state] = dev*dev;
-        float dev2=0;
-        if(state==STATE_SINGLE_DEL || state==STATE_CN_LOH){
-          dev2=data[i*2+1]-0;
-        }else if(state==STATE_NORMAL){
-          dev2 = Math.min((float)Math.abs(data[i*2+1]-.5),data[i*2+1]-0);
-        }else if(state==STATE_SINGLE_DUP){
-          dev2 = Math.min((float)Math.abs(data[i*2+1]-.3),data[i*2+1]-0);
-        }
-        baf_mat[i*states+state] = dev2*dev2;
+        //float dev2=0;
+        //if(state==STATE_SINGLE_DEL || state==STATE_CN_LOH){
+        //  dev2=data[i*2+1]-0;
+        //}else if(state==STATE_NORMAL){
+        //  dev2 = Math.min((float)Math.abs(data[i*2+1]-.5),data[i*2+1]-0);
+        //}else if(state==STATE_SINGLE_DUP){
+        //  dev2 = Math.min((float)Math.abs(data[i*2+1]-.3),data[i*2+1]-0);
+       // }
+       // baf_mat[i*states+state] = dev2*dev2;
+        baf_mat[i*states+state] = mse_mat[i*states+state];
         if(debug)System.err.print("\t"+lrr_mat[i*states+state]+","+baf_mat[i*states+state]);
       }
+      //rescale(lrr_mat,i);
+      //rescale(baf_mat,i);
       if(debug)System.err.println();
     }
   }
+
+/**
+ * Execute the Viterbi scoring conditional on the observed intensities,
+ * and lambda1 and lambda2 penalties.
+ */
 
   private void do_viterbi(){
     int[] traceback = new int[markers*states];
@@ -234,10 +273,19 @@ public class Hmm{
     }
   }
 
+/**
+ * Called by Hadoop CnvReducer to get the results after Viterbi scoring
+ * is completed
+ * @see Reducers
+ * @return an Iterator of Strings where each String is a line for a region bin
+ */
   public Iterator<String> getResults(){
     return new ResultIterator();
   }
 
+/**
+ * Can be called by a unit tested to print out results after Viterbi scoring
+ */
   public void print_output(){
     System.out.println("start\tend\tscaled_depth\tCN\tstate");
     Iterator<String> it_result = getResults();
@@ -270,15 +318,18 @@ public class Hmm{
     search(0,lambda2*2);
   }
 
-  /*
- * entrypoint from Hadoop reduce task
+/**
+ * Entrypoint from Hadoop reduce task
+ * @see Reducers
+ * @param refName The Chromosome name
+ * @param it_text The various bin regions, and their associated intensities
  */
   public void init(String refName, Iterator<Text> it_text){
     this.refName = refName;
     Vector<Integer> start = new Vector<Integer>();
     Vector<Integer> end = new Vector<Integer>();
     Vector<Float> depth = new Vector<Float>();
-    Vector<Float> baf = new Vector<Float>();
+    Vector<Vector<Float>> baf = new Vector<Vector<Float>>();
     int sites = 0;
     mean_coverage = 0;
     
@@ -287,14 +338,19 @@ public class Hmm{
       String reduceValue = it_text.next().toString();
       //System.err.println("CNV REDUCER VALUE: "+reduceValue);
       String [] parts = reduceValue.split("\t");
-      start.add(Integer.decode(parts[0]));
-      end.add(Integer.decode(parts[1]));
-      depth.add(Float.valueOf(parts[2]));
-      baf.add(Float.valueOf(parts[3]));
-      //int bac = Integer.valueOf(parts[3]); 
-      mean_coverage+=(Float.valueOf(parts[4]));
-      sites+=(Integer.valueOf(parts[5]));
-      //baf.add((float)bac/Integer.valueOf(parts[5]));
+      int part = 0;
+      start.add(Integer.decode(parts[part++]));
+      end.add(Integer.decode(parts[part++]));
+      depth.add(Float.valueOf(parts[part++]));
+      Vector<Float> vec = new Vector<Float>();
+      for(int state=0;state<states;++state){
+        Float newFloatVal = Float.valueOf(parts[part++]);
+        //if(newFloatVal==null) System.err.println("DEBUG: FLOAT is null here!");
+        vec.add(newFloatVal);
+      }
+      baf.add(vec);
+      mean_coverage+=(Float.valueOf(parts[part++]));
+      sites+=(Integer.valueOf(parts[part++]));
     }
     //Object[] depth_arr = depth.toArray();
     //Arrays.sort(depth_arr);
@@ -302,6 +358,10 @@ public class Hmm{
     mean_coverage/=sites;
     //mean_coverage = 40;
     this.markers = start.size();
+    //if(baf.size()!=markers){
+      //System.err.println("DEBUG: baf!=markers is size: "+baf.size());
+    //}
+    mse_mat = new float[markers*states];
     //System.err.println("TOTAL MARKERS: "+markers);
     System.err.println("Chr "+refName+" mean coverage of "+markers+" markers is "+mean_coverage);
     ranges = new int[markers*2];
@@ -310,11 +370,26 @@ public class Hmm{
       ranges[i*2] = start.get(i);
       ranges[i*2+1] = end.get(i);
       data[i*2] = depth.get(i);
-      data[i*2+1] = baf.get(i);
+      //data[i*2+1] = baf.get(i);
+      //if(baf.get(i).size()!=states){
+      //  System.err.println("DEBUG: baf at "+i+" is size: "+baf.get(i).size());
+      //}
+      for(int state=0;state<states;++state){
+        Vector<Float> fVal = baf.get(i);
+        //if(fVal==null) System.err.println("DEBUG It's null at "+i);
+        mse_mat[i*states+state] = fVal.get(state);
+      }
     }
     init_matrices();
   }
 
+/**
+ * This is intended for calling by the main function
+ * @param refName The Chromosome name
+ * @param ranges The start and end points of each bin
+ * @param data The intensity values
+ * @param mean_coverage The average intensity for the Chromosome
+ */
   public void init(String refName,int[] ranges,float [] data, float mean_coverage){
     this.mean_coverage = mean_coverage;
     this.refName = refName;
@@ -370,6 +445,10 @@ public class Hmm{
 
   }
 
+
+/**
+ * This inner class handles returning of the results to the Hadoop framework
+ */
   class ResultIterator implements Iterator<String>{
     private int marker = 0;
 
@@ -381,10 +460,23 @@ public class Hmm{
       return marker<=markers-1;
     }
 
+/**
+ * Generate the next string of results for a particular bin
+ */
+
     @Override
     public String next(){ 
       if (marker>=markers) throw new NoSuchElementException();
-      String res = Integer.toString(ranges[marker*2])+"\t"+Integer.toString(ranges[marker*2+1])+"\t"+Float.toString(scaled_depth[marker])+"\t"+Float.toString(data[marker*2+1])+"\t"+Integer.toString(cn_arr[best_state[marker]])+"\t" + Integer.toString(best_state[marker]);
+      String res = Integer.toString(ranges[marker*2])
+      +"\t"+Integer.toString(ranges[marker*2+1])
+      +"\t"+Float.toString(scaled_depth[marker])
+      //+"\t"+Float.toString(data[marker*2+1]) // the median BAF
+      +"\t" + Integer.toString(best_state[marker])
+      +"\t"+Integer.toString(cn_arr[best_state[marker]])
+      +"\t" + Float.toString(baf_mat[marker*states+0])
+      +"\t" + Float.toString(baf_mat[marker*states+1])
+      +"\t" + Float.toString(baf_mat[marker*states+2])
+      +"\t" + Float.toString(baf_mat[marker*states+3]);
       ++marker;
       return res;
     }
