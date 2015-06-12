@@ -39,6 +39,10 @@ Launch HDFS with:
 start-dfs.sh
 ```
 
+We might as well launch the YARN resource manager here as well.
+```
+start-yarn.sh
+```
 Then you'll want to make a root directory to store all user home directories as such:
 
 ```
