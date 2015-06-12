@@ -59,24 +59,24 @@ extends Mapper<LongWritable,Text,
 }
 
 
-//class BinSortMapper
-//extends Mapper<LongWritable,Text,
-//               RefBinKey,Text> {
-//  private final Text newVal = new Text();
-//
-//  @Override protected void map(LongWritable inkey,Text inval,
-//                               Mapper<LongWritable,Text,
-//                               RefBinKey,Text>.Context ctx)
-//    throws InterruptedException, IOException{
-//      String []parts = inval.toString().split("\t");
-//      String refname = parts[0];
-//      int bin = Integer.parseInt(parts[1]);
-//      String value = StringUtils.join(parts,"\t",2,parts.length);
-//      //System.err.println("BinMap value: "+binMapValue);
-//      newVal.set(value);
-//      ctx.write(new RefBinKey(refname,bin),newVal);  
-//    }
-//}
+class BinSortMapper
+extends Mapper<LongWritable,Text,
+               RefBinKey,Text> {
+  private final Text newVal = new Text();
+
+  @Override protected void map(LongWritable inkey,Text inval,
+                               Mapper<LongWritable,Text,
+                               RefBinKey,Text>.Context ctx)
+    throws InterruptedException, IOException{
+      String []parts = inval.toString().split("\t");
+      String refname = parts[0];
+      int bin = Integer.parseInt(parts[1]);
+      String value = StringUtils.join(parts,"\t",2,parts.length);
+      //System.err.println("BinMap value: "+binMapValue);
+      newVal.set(value);
+      ctx.write(new RefBinKey(refname,bin),newVal);  
+    }
+}
 
 ///**
 // * This is the Mapper of the naive Depth Caller that computes an expected

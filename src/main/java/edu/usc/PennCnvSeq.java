@@ -107,11 +107,13 @@ implements Tool{
           depthCallJob.setMapOutputValueClass(ArrayPrimitiveWritable.class);
           depthCallJob.setReducerClass(AlleleDepthWindowReducer.class);
         }else{
-          depthCallJob.setMapperClass(SAMRecordMapper.class);
-          depthCallJob.setMapOutputKeyClass(RefPosBaseKey.class);
-          depthCallJob.setMapOutputValueClass(DoubleWritable.class);
-          depthCallJob.setCombinerClass(AlleleDepthReducer.class);
-          depthCallJob.setReducerClass(AlleleDepthReducer.class);
+          //depthCallJob.setMapperClass(SAMRecordMapper.class);
+          //depthCallJob.setMapOutputKeyClass(RefPosBaseKey.class);
+          //depthCallJob.setMapOutputValueClass(DoubleWritable.class);
+          //depthCallJob.setCombinerClass(AlleleDepthReducer.class);
+          //depthCallJob.setReducerClass(AlleleDepthReducer.class);
+          System.out.println("No window mapper version not implemented.");
+          return -1;
         }
         depthCallJob.setOutputKeyClass   (RefPosBaseKey.class);
         depthCallJob.setOutputValueClass (DoubleWritable.class);
