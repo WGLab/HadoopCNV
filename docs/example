@@ -1,0 +1,7 @@
+## Download data
+
+Let's get started with a small example dataset available from the 1000 Genomes project, namely Chr 22 data of the sample ID NA12878. What we will need is two files from the project. The VCF file can be found at ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/release/20110521/ALL.chr22.phase1_release_v3.20101123.snps_indels_svs.genotypes.vcf.gz and the BAM file can be found at (KAI: Can you please post a link here? I can't find it on KGP site).
+
+## Download and build the project
+
+Go to a directory where you want the PennCNV3 project to reside in. If you 
