@@ -25,7 +25,7 @@ export HADOOP_CLASSPATH=$HADOOP_BAM/target/hadoop-bam-7.0.1-SNAPSHOT-jar-with-de
 
 ## Initial configuration
 
-These steps should be completed as username hadoop on the master node. Configure which nodes are the slaves by editing $HADOOP_CONF_DIR/slaves. This file is straightforward and contains one hostname per line. Do not include the master node in this file.
+These steps should be completed as username hadoop on the master node. Configure which nodes are the slaves by editing $HADOOP_CONF_DIR/slaves. This file is straightforward and contains one hostname per line. Do not include the master node in this file. You will also want to identify the master node in the appropriate files. In yarn-site.xml, be sure the contents of the value tag of the yarn.resourcemanager.hostname property is set to the domain name of your master node. You will also need to set the domain name of the master node in the value tag of the fs.defaultFS property in the core-site.xml file.
 
 You'll want to first format the HDFS system from the namenode. Command is:
 
@@ -43,6 +43,8 @@ We might as well launch the YARN resource manager here as well.
 ```
 start-yarn.sh
 ```
+
+
 Then you'll want to make a root directory to store all user home directories as such:
 
 ```
@@ -61,10 +63,16 @@ Make sure that new directory is writable by the user:
 hdfs dfs -chown -R <username>:superuser /user/<username>/
 ```
 
+We want to store BAM files in a central location on HDFS so all users can access them.  Let's create this directory with the command
+
+...
+hdfs dfs -mkdir /bamfiles
+...
+
 At this point, Hadoop will only the username hadoop to run jobs because Hadoop always creates several temporary folders for "staging" a job. Once this first job is done, one can make this staging directory world writable for the rest of the users. Run a test job under username hadoop (see Launching Jobs), and then run:
 
 ```
-hdfs dfs -chmod -R 777 /tmp
+hdfs dfs -chmod -R 777 /tmp /bamfiles
 ```
 
 ### Moving data to and from HDFS
