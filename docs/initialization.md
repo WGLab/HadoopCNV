@@ -1,14 +1,16 @@
-## Terminology
+This document pertains to configuration of Hadoop as applicable to the biocluster cluster at Zilkha. It assumes the user has permissions to log in as the hadoop user.
+
+# Terminology
 
 YARN is the resource scheduler for the cluster. YARN is the default backbone of frameworks such as Hadoop. Other frameworks like Apache Spark can also exploit an existing YARN cluster. The master node is called the resourcemanager, the slaves are nodemanagers.
 
 Hadoop is the other aspect that handles the distribution and processing of data. The master node(s) is called the namenode/secondarynamenode and the slaves nodes are datanodes. The distributed filesystem of Hadoop is called HDFS.
 
-## Overall Architecture
+# Overall Architecture
 
 We want to assign one of the biocluster compute nodes as the head node and the remaining nodes as worker nodes. Currently, compute-0-0.local is assigned as the head node. The Hadoop and YARN scripts should always be launched from the head node. The user hadoop should run scripts in the sbin directory of the Hadoop distribution root (these are not world readable/executable). These scripts include start_dfs.sh, stop_dfs.sh, start_yarn.sh, and stop_yarn.sh, which handle starting and stopping of Hadoop and YARN services across all nodes of the cluster. Other scripts, which are found in the bin directory of the Hadoop distribution root include commands such as hdfs and yarn, which handle tasks like launching Hadoop jobs, copying files to/from HDFS, monitoring running jobs, killing jobs, etc. These are meant to be run by any user and are world readable/executable.
 
-## Configuration common to all users
+# Configuration common to all users
 
 For each user that plans to use Hadoop, environment variables should be assigned in the user's .bash_profile initialization script.  Details follow in this section. Also, users should be able to connect over SSH to other nodes (including the master node itself) without entering a password. This should just be matter of appending the contents of ~/.ssh/id_rsa.pub (or the appropriate public key file) into ~/.ssh/authorized_keys. Verify correct behavior with a test connection over SSH.
 
@@ -23,7 +25,7 @@ export HADOOP_BAM=/home/hadoop/hadoop/Hadoop-BAM-master
 export HADOOP_CLASSPATH=$HADOOP_BAM/target/hadoop-bam-7.0.1-SNAPSHOT-jar-with-dependencies.jar
 ```
 
-## Initial configuration
+# Initial configuration
 
 These steps should be completed as username hadoop on the master node. Configure which nodes are the slaves by editing $HADOOP_CONF_DIR/slaves. This file is straightforward and contains one hostname per line. Do not include the master node in this file. You will also want to identify the master node in the appropriate files. In yarn-site.xml, be sure the contents of the value tag of the yarn.resourcemanager.hostname property is set to the domain name of your master node. You will also need to set the domain name of the master node in the value tag of the fs.defaultFS property in the core-site.xml file.
 
@@ -58,7 +60,7 @@ A second script, test_hadoop_bam.sh will do two things. It makes sure that Hadoo
 ./test_hadoop_bam.sh
 ```
 
-### Moving data to and from HDFS
+## Moving data to and from HDFS
 
 Commands for filesystem operations on HDFS are almost identical to their UNIX counterparts. Make a directory with
 
@@ -81,7 +83,7 @@ For more info type
 hdfs dfs -help
 ```
 
-### Jobs administration
+## Jobs administration
 
 The command for launching jobs is
 
@@ -97,5 +99,11 @@ You can kill a job with
 yarn application -kill <jobid>
 ```
  
+## Web monitoring
+
+You'll want to ensure that there is a port mapping of port TCP port 8088 to compute-0-0, so that users with a web browser can monitor progress of jobs. The URL for job monitoring is
+```
+http://biocluster.med.usc.edu:8088/cluster
+```
 
 
