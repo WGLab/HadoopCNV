@@ -44,35 +44,18 @@ We might as well launch the YARN resource manager here as well.
 start-yarn.sh
 ```
 
-
-Then you'll want to make a root directory to store all user home directories as such:
-
-```
-hdfs dfs -mkdir /user
-```
-
-Then for each username (which matches the unix username), apply the command:
+Some convenience scripts are included in $HOME/hadoop directory when logged in as hadoop. The first script will initialize home directories for all Hadoop users.  Edit the line reading 
 
 ```
-hdfs dfs -mkdir /user/<username>
+users='kaiwang huiyang garychen1'
 ```
-
-Make sure that new directory is writable by the user:
-
+to include any users that will be using the cluster. Run the script as 
 ```
-hdfs dfs -chown -R <username>:superuser /user/<username>/
+./make_users.sh
 ```
-
-We want to store BAM files in a central location on HDFS so all users can access them.  Let's create this directory with the command
-
-...
-hdfs dfs -mkdir /bamfiles
-...
-
-At this point, Hadoop will only the username hadoop to run jobs because Hadoop always creates several temporary folders for "staging" a job. Once this first job is done, one can make this staging directory world writable for the rest of the users. Run a test job under username hadoop (see Launching Jobs), and then run:
-
+A second script, test_hadoop_bam.sh will do two things. It makes sure that Hadoop-BAM is installed correctly, and it also generates some temp directories, which are necessary for regular Hadoop users to run jobs. Execute this with command
 ```
-hdfs dfs -chmod -R 777 /tmp /bamfiles
+./test_hadoop_bam.sh
 ```
 
 ### Moving data to and from HDFS
