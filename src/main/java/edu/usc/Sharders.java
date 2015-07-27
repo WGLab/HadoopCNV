@@ -11,102 +11,95 @@ import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.LongWritable;
 
-
-public class Sharders{
+public class Sharders {
 }
 
-class SortRecordReader extends RecordReader<RefPosBaseKey,Text>{
+class SortRecordReader extends RecordReader<RefPosBaseKey, Text> {
 
- /* methods are delegated to this variable
- *
- */
-  private final RecordReader<LongWritable, Text> reader;
+    /* methods are delegated to this variable
+     *
+     */
+    private final RecordReader<LongWritable, Text> reader;
 
-  private final RefPosBaseKey currentKey = new RefPosBaseKey();
-  private final Text currentValue = new Text();
+    private final RefPosBaseKey currentKey = new RefPosBaseKey();
+    private final Text currentValue = new Text();
 
-  public SortRecordReader(final RecordReader<LongWritable,Text>reader)
-  throws IOException{
-    this.reader = reader;
-  }
-
-  @Override
-  public void close() throws IOException {
-    reader.close();
-  }
-
-  @Override 
-  public RefPosBaseKey getCurrentKey(){ 
-    return currentKey;
-  }
-
-  @Override 
-  public Text getCurrentValue(){ 
-    return currentValue;
-  }
-
-  @Override
-  public float getProgress() throws IOException,InterruptedException {
-    return reader.getProgress();
-  }
-
-  @Override
-  public void initialize(InputSplit split, TaskAttemptContext context) 
-  throws IOException,InterruptedException {
-    reader.initialize(split,context);
-  }
-
-  @Override
-  public boolean nextKeyValue()
-  throws IOException,InterruptedException{
-    boolean result = reader.nextKeyValue();
-    if(!result){
-      return false;
+    public SortRecordReader(final RecordReader<LongWritable, Text> reader)
+            throws IOException {
+        this.reader = reader;
     }
-    Text lineRecordReaderValue = reader.getCurrentValue();
 
-    extractKey(lineRecordReaderValue);
-    currentValue.set(extractValue(lineRecordReaderValue));
-    return true;
-  }
+    @Override
+    public void close() throws IOException {
+        reader.close();
+    }
 
-  private void extractKey(final Text value)
-  throws IOException{
-    String[] parts = value.toString().split("\t");
-    //int binRange = (int)(Integer.parseInt(parts[1]) / bin_length);
-    //System.err.println("BINRANGE for "+parts[1]+" is "+binRange);
-    //RefPosBaseKey newKey = new RefPosBaseKey(parts[0],binRange);
-    //RefPosBaseKey newKey = new RefPosBaseKey(parts[0],Integer.parseInt(parts[1]));
-    currentKey.setRefName(parts[0]);
-    currentKey.setPosition(Integer.parseInt(parts[1]));
-    currentKey.setBase(Integer.parseInt(parts[2]));
-    //return newKey;
-  }
+    @Override
+    public RefPosBaseKey getCurrentKey() {
+        return currentKey;
+    }
 
-  private String extractValue(final Text value)
-  throws IOException{
-    String[] parts = value.toString().split("\t");
-    //String newVal = StringUtils.join(parts,"\t",2,6);
-    return parts[3];
-  }
+    @Override
+    public Text getCurrentValue() {
+        return currentValue;
+    }
+
+    @Override
+    public float getProgress() throws IOException, InterruptedException {
+        return reader.getProgress();
+    }
+
+    @Override
+    public void initialize(InputSplit split, TaskAttemptContext context)
+            throws IOException, InterruptedException {
+        reader.initialize(split, context);
+    }
+
+    @Override
+    public boolean nextKeyValue()
+            throws IOException, InterruptedException {
+        boolean result = reader.nextKeyValue();
+        if (!result) {
+            return false;
+        }
+        Text lineRecordReaderValue = reader.getCurrentValue();
+
+        extractKey(lineRecordReaderValue);
+        currentValue.set(extractValue(lineRecordReaderValue));
+        return true;
+    }
+
+    private void extractKey(final Text value)
+            throws IOException {
+        String[] parts = value.toString().split("\t");
+        currentKey.setRefName(parts[0]);
+        currentKey.setPosition(Integer.parseInt(parts[1]));
+        currentKey.setBase(Integer.parseInt(parts[2]));
+        //return newKey;
+    }
+
+    private String extractValue(final Text value)
+            throws IOException {
+        String[] parts = value.toString().split("\t");
+        return parts[3];
+    }
 }
 
 class SortInputFormat
-extends InputFormat {
+        extends InputFormat {
 
-  private final TextInputFormat inputFormat = new TextInputFormat();
+    private final TextInputFormat inputFormat = new TextInputFormat();
 
-  @Override
-  public List<InputSplit> getSplits(JobContext context)
-  throws IOException,InterruptedException{
-    return inputFormat.getSplits(context);
-  }
+    @Override
+    public List<InputSplit> getSplits(JobContext context)
+            throws IOException, InterruptedException {
+        return inputFormat.getSplits(context);
+    }
 
-  @Override
-  public RecordReader<RefPosBaseKey,Text> createRecordReader(final InputSplit genericSplit, TaskAttemptContext context)
-  throws IOException,InterruptedException {
-    context.setStatus(genericSplit.toString());
-    return new SortRecordReader(inputFormat.createRecordReader(genericSplit,context));
-  }
+    @Override
+    public RecordReader<RefPosBaseKey, Text> createRecordReader(final InputSplit genericSplit, TaskAttemptContext context)
+            throws IOException, InterruptedException {
+        context.setStatus(genericSplit.toString());
+        return new SortRecordReader(inputFormat.createRecordReader(genericSplit, context));
+    }
 }
-
