@@ -111,7 +111,7 @@ class BinReducer
             bafSet.add(0f);
         }
         int baf_n = bafSet.size();
-//        double mean_depth = (n > 0) ? total_depth / n : 0;
+        double mean_depth = (n > 0) ? total_depth / n : 0;
         Iterator<Float> depthSetIt = depthSet.iterator();
         Iterator<Float> bafSetIt = bafSet.iterator();
         float medianDepth = 0;
@@ -138,11 +138,11 @@ class BinReducer
             mse_states[1] += currentBaf2;
             mse_states[2] += currentIter >= exp_het_index ? (.5 - currentBaf) * (.5 - currentBaf) : currentBaf2;
             mse_states[3] += currentIter >= exp_het_index ? (.33 - currentBaf) * (.33 - currentBaf) : currentBaf2;
-
             if (debug) {
                 System.err.println("DEBUG: currentIter: " + currentIter + " exp_het_index: " + exp_het_index);
             }
-
+            //mse_states[2]+= Math.min(currentBaf2, (.5-currentBaf)*(.5-currentBaf));
+            //mse_states[3]+= Math.min(currentBaf2, (.33-currentBaf)*(.33-currentBaf));
             ++currentIter;
         }
         if (baf_n > 0) {
@@ -168,7 +168,6 @@ class CnvReducer
 
     private final Text outKey = new Text();
     private final Text textRes = new Text();
-    Hmm hmm = new Hmm();
 
     /**
      * @param inkey A composite key consisting of Chromosome and Bin ID
@@ -183,7 +182,7 @@ class CnvReducer
             throws InterruptedException, IOException {
         Iterator<Text> it_text = invals.iterator();
         if (it_text.hasNext()) {
-//            Hmm hmm = new Hmm();
+            Hmm hmm = new Hmm();
             hmm.init(inkey.getRefName(), it_text);
 
             hmm.run();
@@ -198,6 +197,30 @@ class CnvReducer
     }
 }
 
+//class AlleleDepthReducer
+//extends Reducer<RefPosBaseKey,DoubleWritable,
+//               RefPosBaseKey,DoubleWritable> {
+//
+//  private DoubleWritable doubleWritable = null;
+//
+//  public AlleleDepthReducer(){
+//    doubleWritable = new DoubleWritable();
+//  }
+//  @Override protected void reduce(RefPosBaseKey inkey,Iterable<DoubleWritable> invals, Reducer<RefPosBaseKey,DoubleWritable, RefPosBaseKey,DoubleWritable>.Context ctx)
+//    throws InterruptedException, IOException{
+//      Iterator<DoubleWritable> it = invals.iterator();
+//      double sum = 0.;
+//      while(it.hasNext()){
+//        sum+= it.next().get();
+//      }      
+//
+//      if(sum>=1.0){
+//        doubleWritable.set(sum);
+//         ctx.write(inkey,doubleWritable);  
+//      }
+//      //System.err.println("REDUCER: "+inkey.toString()+": "+sum);
+//    }
+//}
 /**
  * A reducer class for efficiently computing the quality score weighted depth
  * counts for each base in a read view.
@@ -235,13 +258,21 @@ class AlleleDepthWindowReducer
             qualitymap_list.set(i, null);
         }
         boolean debug = false;
+//        int bin_size = Constants.read_bin_width;
         refPosBaseKey.setRefName(inkey.getRefName());
-
+        //refPosBaseKey.setBase(1);
+        //doubleWritable.set(0);
+        //for(int i=0;i<bin_size;++i){
+        //refPosBaseKey.setPosition(inkey.getBin() + i + 1);
+        //ctx.write(refPosBaseKey,doubleWritable);  
+        //}
         if (true) {
             Iterator<ArrayPrimitiveWritable> it = invals.iterator();
+            //double sum = 0.;
             double quality_threshold = Constants.base_quality_threshold;
             int reduce_list_size = 0;
             while (it.hasNext()) {
+                //sum+= it.next().get();
                 if (debug) {
                     System.err.print("KEY:" + inkey.toString());
                 }
@@ -257,13 +288,12 @@ class AlleleDepthWindowReducer
                         if (debug) {
                             System.err.print(" " + allele);
                         }
-
                         double qual = 1. - Math.pow(10, -basequal * .1);
                         if (qual > quality_threshold) {
+                            //qual = 1.0;
                             Map<Integer, Double> map = qualitymap_list.get(i);
                             Double val; // = null;
                             if (map == null) {
-//                                map = new HashMap<Integer, Double>();
                                 map = new HashMap<>();
                                 val = qual;
                             } else {

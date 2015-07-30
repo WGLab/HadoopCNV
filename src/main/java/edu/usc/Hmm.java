@@ -36,10 +36,11 @@ public class Hmm {
     private float lambda1 = Constants.abberration_penalty;
     private float lambda2 = Constants.transition_penalty;
 
-//    private static final int STATE_SINGLE_DEL = 0;
-//    private static final int STATE_CN_LOH = 1;
-//    private static final int STATE_NORMAL = 2;
-//    private static final int STATE_SINGLE_DUP = 3;
+    private static final int STATE_SINGLE_DEL = 0;
+    private static final int STATE_CN_LOH = 1;
+    private static final int STATE_NORMAL = 2;
+    private static final int STATE_SINGLE_DUP = 3;
+
     public Hmm(int markers) {
         this.markers = markers;
     }
@@ -126,16 +127,16 @@ public class Hmm {
 
     }
 
-//    private void rescale(float mat[], int row) {
-//        float sum = 0f;
-//        for (int state = 0; state < states; ++state) {
-//            sum += mat[row * states + state];
-//        }
-//        for (int state = 0; state < states; ++state) {
-//            mat[row * states + state] /= sum;
-//        }
-//    }
-//
+    private void rescale(float mat[], int row) {
+        float sum = 0f;
+        for (int state = 0; state < states; ++state) {
+            sum += mat[row * states + state];
+        }
+        for (int state = 0; state < states; ++state) {
+            mat[row * states + state] /= sum;
+        }
+    }
+
     private void compute_emission() {
         if (markers < 2) {
             return;

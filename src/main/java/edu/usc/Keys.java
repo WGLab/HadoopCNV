@@ -3,121 +3,98 @@ package edu.usc;
 import java.io.IOException;
 import java.io.DataInput;
 import java.io.DataOutput;
-import java.util.Objects;
 import org.apache.hadoop.io.WritableComparable;
 
-//public class Keys {
-//}
-//
-//class RefRangeAlignmentKey implements WritableComparable<RefRangeAlignmentKey> {
-//
-//    private String refname;
-//    private int position1;
-//    private int position2;
-//    private String bases;
-//
-//    public RefRangeAlignmentKey() {
-//    }
-//
-//    public RefRangeAlignmentKey(String refname, int position1, int position2, String bases) {
-//        this.refname = refname;
-//        this.position1 = position1;
-//        this.position2 = position2;
-//        this.bases = bases;
-//    }
-//
-//    public void setRefName(String refname) {
-//        this.refname = refname;
-//    }
-//
-//    public void setPosition1(int position1) {
-//        this.position1 = position1;
-//    }
-//
-//    public void setPosition2(int position2) {
-//        this.position2 = position2;
-//    }
-//
-//    public void setBase(String bases) {
-//        this.bases = bases;
-//    }
-//
-//    @Override
-//    public void write(DataOutput out) throws IOException {
-//        out.writeUTF(refname);
-//        out.writeInt(position1);
-//        out.writeInt(position2);
-//        out.writeUTF(bases);
-//    }
-//
-//    @Override
-//    public void readFields(DataInput in) throws IOException {
-//        refname = in.readUTF();
-//        position1 = in.readInt();
-//        position2 = in.readInt();
-//        bases = in.readUTF();
-//    }
-//
-//    @Override
-//    public int compareTo(RefRangeAlignmentKey other) {
-//        int cmp = refname.compareTo(other.refname);
-//        if (cmp != 0) {
-//            return cmp;
-//        }
-//
-//        if (this.position1 < other.position1) {
-//            return -1;
-//        } else if (this.position1 > other.position1) {
-//            return 1;
-//        } else if (this.position2 < other.position2) {
-//            return -1;
-//        } else if (this.position2 > other.position2) {
-//            return 1;
-//        } else {
-//            return bases.compareTo(other.bases);
-//        }
-//    }
-//
-//    @Override
-//    public String toString() {
-//        return refname + "\t" + Integer.toString(position1) + "\t" + Integer.toString(position2) + "\t" + bases;
-//    }
-//
-//    @Override
-//    public int hashCode() {
-//        final int prime = 31;
-//        int result = 1;
-//        result = prime * result + ((refname == null) ? 0 : refname.hashCode());
-////        result = prime * result + (int) (position1 ^ (position1 >>> 32));
-////        result = prime * result + (int) (position2 ^ (position2 >>> 32));
-//        result = prime * result + (int) (position1 ^ (32 >>> position1));
-//        result = prime * result + (int) (position2 ^ (32 >>> position2));
-//        result = prime * result + ((bases == null) ? 0 : bases.hashCode());
-//        return result;
-//    }
-//
-//    @Override
-//    public boolean equals(Object obj) {
-//        if (obj == null) {
-//            return false;
-//        }
-//        if (getClass() != obj.getClass()) {
-//            return false;
-//        }
-//        final RefRangeAlignmentKey other = (RefRangeAlignmentKey) obj;
-//        if (!Objects.equals(this.refname, other.refname)) {
-//            return false;
-//        }
-//        if (this.position1 != other.position1) {
-//            return false;
-//        }
-//        if (this.position2 != other.position2) {
-//            return false;
-//        }
-//        return Objects.equals(this.bases, other.bases);
-//    }
-//}
-//
+public class Keys {
+}
+
+class RefRangeAlignmentKey implements
+        WritableComparable<RefRangeAlignmentKey> {
+
+    private String refname;
+    private int position1;
+    private int position2;
+    private String bases;
+
+    public RefRangeAlignmentKey() {
+    }
+
+    public RefRangeAlignmentKey(String refname, int position1, int position2, String bases) {
+        this.refname = refname;
+        this.position1 = position1;
+        this.position2 = position2;
+        this.bases = bases;
+    }
+
+    public void setRefName(String refname) {
+        this.refname = refname;
+    }
+
+    public void setPosition1(int position1) {
+        this.position1 = position1;
+    }
+
+    public void setPosition2(int position2) {
+        this.position2 = position2;
+    }
+
+    public void setBase(String bases) {
+        this.bases = bases;
+    }
+
+    @Override
+    public void write(DataOutput out) throws IOException {
+        out.writeUTF(refname);
+        out.writeInt(position1);
+        out.writeInt(position2);
+        out.writeUTF(bases);
+    }
+
+    @Override
+    public void readFields(DataInput in) throws IOException {
+        refname = in.readUTF();
+        position1 = in.readInt();
+        position2 = in.readInt();
+        bases = in.readUTF();
+    }
+
+    @Override
+    public int compareTo(RefRangeAlignmentKey other) {
+        int cmp = refname.compareTo(other.refname);
+        if (cmp != 0) {
+            return cmp;
+        }
+
+        if (this.position1 < other.position1) {
+            return -1;
+        } else if (this.position1 > other.position1) {
+            return 1;
+        } else if (this.position2 < other.position2) {
+            return -1;
+        } else if (this.position2 > other.position2) {
+            return 1;
+        } else {
+            return bases.compareTo(other.bases);
+        }
+    }
+
+    @Override
+    public String toString() {
+        return refname + "\t" + Integer.toString(position1) + "\t" + Integer.toString(position2) + "\t" + bases;
+    }
+
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + ((refname == null) ? 0 : refname.hashCode());
+        result = prime * result + (int) (position1 ^ (position1 >>> 32));
+        result = prime * result + (int) (position2 ^ (position2 >>> 32));
+        result = prime * result + ((bases == null) ? 0 : bases.hashCode());
+        return result;
+    }
+}
+
 class RefPosBaseKey implements
         WritableComparable<RefPosBaseKey> {
 
@@ -190,28 +167,9 @@ class RefPosBaseKey implements
         final int prime = 31;
         int result = 1;
         result = prime * result + ((refname == null) ? 0 : refname.hashCode());
-//        result = prime * result + (int) (position ^ (position >>> 32));
-        result = prime * result + (int) (position ^ (32 >>> position));
+        result = prime * result + (int) (position ^ (position >>> 32));
         result = prime * result + base;
         return result;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (obj == null) {
-            return false;
-        }
-        if (getClass() != obj.getClass()) {
-            return false;
-        }
-        final RefPosBaseKey other = (RefPosBaseKey) obj;
-        if (!Objects.equals(this.refname, other.refname)) {
-            return false;
-        }
-        if (this.position != other.position) {
-            return false;
-        }
-        return this.base == other.base;
     }
 }
 
@@ -283,20 +241,5 @@ class RefBinKey implements
         result = prime * result + ((refname == null) ? 0 : refname.hashCode());
         result = prime * result + bin;
         return result;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (obj == null) {
-            return false;
-        }
-        if (getClass() != obj.getClass()) {
-            return false;
-        }
-        final RefBinKey other = (RefBinKey) obj;
-        if (!Objects.equals(this.refname, other.refname)) {
-            return false;
-        }
-        return this.bin == other.bin;
     }
 }
