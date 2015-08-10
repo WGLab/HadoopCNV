@@ -41,13 +41,17 @@ You will want to add nodes into your cluster, please add the names directly into
 
 One example file is shown below:
 
-```compute-0-20
-compute-0-21```
+```
+compute-0-20
+compute-0-21
+```
 
 
 You'll want to first format the HDFS system from the namenode. Command is:
 
 WARNING: Please notice that this will delete all your data in HDFS. Please don't do this if you just want to add nodes!
+
+WARNING: All the commands below should be used in compute-0-0 instead of HEAD node!!!!!
 
 ```
 hdfs namenode -format
