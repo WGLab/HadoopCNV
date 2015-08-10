@@ -1,0 +1,6 @@
+example/.results.txt.crc
+example/results.txt
+example/timelog_*_nodes
+example/timestamp.pl
+example/vcfs/
+target/
