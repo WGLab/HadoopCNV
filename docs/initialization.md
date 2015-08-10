@@ -68,7 +68,7 @@ We might as well launch the YARN resource manager here as well.
 start-yarn.sh
 ```
 
-Some convenience scripts are included in $HOME/hadoop directory when logged in as hadoop. The first script will initialize home directories for all Hadoop users.  Edit the line reading 
+Some convenience scripts are included in $HOME/hadoop directory when logged in as hadoop. The first script will initialize home directories for all Hadoop users.  Edit the line reading in make_users.sh
 
 ```
 users='kaiwang huiyang garychen1'
