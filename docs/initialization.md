@@ -29,6 +29,8 @@ export HADOOP_CONF_DIR=$HADOOP_PREFIX/etc/hadoop
 
 export HADOOP_BAM=/home/hadoop/hadoop/Hadoop-BAM-master
 export HADOOP_CLASSPATH=$HADOOP_BAM/target/hadoop-bam-7.0.1-SNAPSHOT-jar-with-dependencies.jar
+
+export PATH=$PATH:.:$HADOOP_PREFIX/bin:$HADOOP_PREFIX/sbin
 ```
 
 # Initial configuration
