@@ -68,7 +68,7 @@ This example will generate a CNV inference file called `results.txt`.
 The output of the CNV inference file may look something like
 
 ```
-[garychen1@biocluster results]$ head LID57241.cnv 
+[kaiwang@compute-0-0 results]$ head LID57241.cnv 
 chr15	20000001	20009999	0.5	2	2	0.08109671	0.08109671	0.043230638	0.0374051
 chr15	20010000	20019999	0.5	2	2	0.113873154	0.113873154	7.2674535E-4	0.011146525
 chr15	20020000	20029999	0.34367514	1	2	0.0	0.0	0.25	0.1089
@@ -79,8 +79,6 @@ chr15	20060000	20069999	0.42275795	2	2	0.12536615	0.12536615	0.09758934	0.100800
 chr15	20070000	20079999	0.5	2	2	0.1261959	0.1261959	0.061361913	0.06470547
 chr15	20080000	20089999	0.31751218	2	2	0.1273877	0.1273877	0.09087578	0.093089834
 chr15	20090000	20099999	0.05379453	2	2	0.13501406	0.13501406	0.05958985	0.06653408
-[garychen1@biocluster results]$ 
-
 ```
 
 The columns are interpreted as chromosome name, start base for the bin, end base for the bin, median depth count (normalized to [-.5,5]), copy number, HMM state (0=single deletion,1=copy neutral LOH,2=normal,3=single copy amplification), MSE_BAF_0, MSE_BAF_1, MSE_BAF_2, MSE_BAF_3. For more information regarding the last four fields, please refer to our manuscript. Briefly, these are mean squared errors for each of the four states conditional on the BAF model for that state. Lower values signify a better fit for that particular state's hypothesis.
