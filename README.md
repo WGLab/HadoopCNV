@@ -6,4 +6,4 @@ In addition to single nucleotide variants (SNVs) and small insertions or deletio
 
 ## Reference
 
-Yang H, Chen G, Fang H, Jimenez L, Lyon GJ, He M, Wang K. PennCNV3 : A Highly Scalable Solution for Accurate Detection of Copy Number Variations from Whole-Genome Sequencing Data.
+Yang H, Chen G, Lima L, Fang H, Jimenez L, Li M, Lyon GJ, He M, Wang K. PennCNV3 : A Highly Scalable Solution for Accurate Detection of Copy Number Variations from Whole-Genome Sequencing Data.
