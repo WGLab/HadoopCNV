@@ -16,7 +16,7 @@ public class Constants {
      * The min quality score for a read to be considered mapped. 0 is worst, 1
      * is best
      */
-    public static final double mapping_quality_threshold = .99;
+    public static final double mapping_quality_threshold = 0;
     /**
      * The min quality score for a base to be considered mapped. 0 is worst, 1
      * is best
@@ -28,7 +28,7 @@ public class Constants {
      * HMM. A wider window will provide smoother values but less resolution.
      * Default is 10000.
      */
-    public static final int bin_width = 10000;
+    public static final int bin_width = 100;
 
     /**
      * The minimum proportion of sites in a bin window that are heterozygous, as
@@ -45,7 +45,7 @@ public class Constants {
      * value of zero means no penalty, and a negative penalty instructs the
      * program to estimates this penalty as the SD of the overall signal.
      */
-    public static final float abberration_penalty = -1f;
+    public static final float abberration_penalty = 0f;
     /**
      * This penalty corresponds to the L1 penalty for transitions between
      * states. A higher value enforces a model with longer blocks of

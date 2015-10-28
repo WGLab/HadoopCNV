@@ -1,6 +1,5 @@
-example/.results.txt.crc
-example/results.txt
-example/timelog_*_nodes
-example/timestamp.pl
-example/vcfs/
+example/*
+!example/config.txt
+!example/compile_penncnv3.pl
+!example/run.sh
 target/
