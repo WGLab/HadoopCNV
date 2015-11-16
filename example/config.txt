@@ -1,9 +1,9 @@
 # it is assumed that this file exists on HDFS already
 # File name must have a dot inside
-BAM_FILE: /bamfiles/cov20*.bam
-#BAM_FILE: /bamfiles/cov20*bam
+BAM_FILE: /bamfiles/LID/LID57250.bam
+#BAM_FILE: /bamfiles/LID/LID57250.bam
 # this is the local path to the corresponding VCF. Change accordingly.
-VCF_FILE: VCF/hg19_AFR.sites.2015_08.simple.vcf
+VCF_FILE: vcfs/KGP/NA12878_KGP.vcf
 # following are the pipeline components that should be run.
 RUN_DEPTH_CALLER: true
 RUN_GLOBAL_SORT: true

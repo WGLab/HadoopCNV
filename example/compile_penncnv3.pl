@@ -28,7 +28,7 @@ while(<>){
 		$pre_end = $end; 
 	}
 	elsif($chr ne $pre_chr){
-		$pre_chr = "chr".$pre_chr if($pre_chr =~ /^\d+$/);
+		$pre_chr = "chr".$pre_chr if($pre_chr =~ /^[\dXY]+$/);
 		#print "$pre_type\t$pre_chr:$pre_start-$pre_end\n";
 		if ($pre_type eq "deletion"){
 			push @dels,[$pre_chr, $pre_start, $pre_end];
@@ -39,7 +39,7 @@ while(<>){
 		($pre_type, $pre_chr, $pre_start, $pre_end) = ($type, $chr, $start, $end);
 	}
 	elsif($type ne $pre_type){
-		$pre_chr = "chr".$pre_chr if($pre_chr =~ /^\d+$/);
+		$pre_chr = "chr".$pre_chr if($pre_chr =~ /^[\dXY]+$/);
 		#print "$pre_type\t$pre_chr:$pre_start-$pre_end\n";
 		if ($pre_type eq "deletion"){
 			push @dels,[$pre_chr, $pre_start, $pre_end];
@@ -56,7 +56,7 @@ while(<>){
     	$pre_end = $end;
     }
     else{
-        $pre_chr = "chr".$pre_chr if($pre_chr =~ /^\d+$/);
+        $pre_chr = "chr".$pre_chr if($pre_chr =~ /^[\dXY]+$/);
 		#print "$pre_type\t$pre_chr:$pre_start-$pre_end\n";
 		if ($type eq "deletion"){
 			push @dels,[$pre_chr, $pre_start, $pre_end];
@@ -67,7 +67,7 @@ while(<>){
 		($pre_type, $pre_chr, $pre_start, $pre_end) = ($type, $chr, $start, $end);
     }
 }
-$pre_chr = "chr".$pre_chr if($pre_chr =~ /^\d+$/);
+$pre_chr = "chr".$pre_chr if($pre_chr =~ /^[\dXY]+$/);
 #print "$pre_type\t$pre_chr:$pre_start-$pre_end\n";
 if ($pre_type eq "deletion"){
 			push @dels,[$pre_chr, $pre_start, $pre_end];
@@ -120,10 +120,14 @@ sub merge {
 @dups = merge(\@dups);
 for my $cnv (@dels){
 	my ($chr, $start, $end) = @$cnv;
+	my $len = $end-$start+1;
+	next if($len < 500);
 	print join("\t", ("deletion", "$chr:$start-$end") )."\n";
 }
 for my $cnv (@dups){
 	my ($chr, $start, $end) = @$cnv;
+	my $len = $end-$start+1;
+	next if($len < 500);
 	print join("\t", ("duplication", "$chr:$start-$end") )."\n";
 }
 
