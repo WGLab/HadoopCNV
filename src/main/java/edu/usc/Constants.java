@@ -4,6 +4,8 @@ package edu.usc;
  * The following constants must be set here, and source compiled, as the Mappers
  * and Reducers that are run on the cluster are stateless (i.e. do not accept
  * initializers)
+ *
+ * @author Gary Chen, Ph.D.
  */
 public class Constants {
 

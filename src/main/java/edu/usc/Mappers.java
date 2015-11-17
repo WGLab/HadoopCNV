@@ -14,6 +14,8 @@ import org.seqdoop.hadoop_bam.SAMRecordWritable;
 
 /**
  * Placeholder class for Mappers. Currently no functionality here.
+ *
+ * @author Gary Chen, Ph.D.
  */
 public class Mappers {
 }
