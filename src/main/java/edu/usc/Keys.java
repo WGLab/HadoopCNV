@@ -5,6 +5,10 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import org.apache.hadoop.io.WritableComparable;
 
+/*
+ *
+ * @author Gary Chen, Ph.D.
+ */
 public class Keys {
 }
 

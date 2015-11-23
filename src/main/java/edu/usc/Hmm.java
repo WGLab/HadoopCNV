@@ -15,6 +15,8 @@ import org.apache.hadoop.io.Text;
  * intensity signals over a Chromosome length region. It is intended to be
  * called by the Hadoop framework, but can be easily unit tested by calling the
  * main function.
+ *
+ * @author Gary Chen, Ph.D.
  */
 public class Hmm {
 

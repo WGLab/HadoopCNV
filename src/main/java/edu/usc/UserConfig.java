@@ -9,6 +9,8 @@ import java.util.Properties;
  * for PennCnvSeq. Convenience methods are provided to return the appropriate
  * type from a String.
  *
+ * @author Gary Chen, Ph.D.
+ * @revised by Max He, Ph.D.
  */
 public class UserConfig {
 
@@ -114,6 +116,10 @@ public class UserConfig {
 
     public static String getReducerMb() {
         return getConfig("REDUCER_MB").trim();
+    }
+
+    public static int getReducerTasks() {
+        return Integer.parseInt(getConfig("REDUCER_TASKS").trim());
     }
 
     private static String getConfig(String key) {

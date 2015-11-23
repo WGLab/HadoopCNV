@@ -105,6 +105,7 @@ public class PennCnvSeq extends Configured implements Tool {
             boolean runRegionBinJob = UserConfig.getRunBinner();
             boolean runCnvCallJob = UserConfig.getRunCnvCaller();
             boolean runGlobalSortJob = UserConfig.getRunGlobalSort();
+            int numRecudeTasks = UserConfig.getReducerTasks();
             if (debug) {
                 System.err.println("numReduceTasksBig: " + numReduceTasksBig
                         + " numReduceTasksSmall: " + numReduceTasksSmall
@@ -268,7 +269,8 @@ public class PennCnvSeq extends Configured implements Tool {
                 Job secondarySortJob = Job.getInstance(conf, "Secondary Sort Job");
                 secondarySortJob.setJobName("secondary_sorter");
                 secondarySortJob.setJarByClass(PennCnvSeq.class);
-                secondarySortJob.setNumReduceTasks(24);
+//                secondarySortJob.setNumReduceTasks(24);
+                secondarySortJob.setNumReduceTasks(numRecudeTasks);
                 secondarySortJob.setInputFormatClass(TextInputFormat.class);
                 secondarySortJob.setMapperClass(BinSortMapper.class);
                 secondarySortJob.setMapOutputKeyClass(RefBinKey.class);
@@ -340,10 +342,10 @@ class ChrGroupingComparator extends WritableComparator {
 }
 
 class ChrPartitioner extends Partitioner<RefBinKey, Text> {
+
     /*
      * Delegates the refname of the composite key to the hash partitioner
      */
-
     private final HashPartitioner<Text, Text> hashPartitioner = new HashPartitioner<>();
     private final Text newKey = new Text();
 

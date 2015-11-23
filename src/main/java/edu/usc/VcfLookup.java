@@ -11,6 +11,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
 
+/*
+ *
+ * @author Gary Chen, Ph.D.
+ * @revised by Max He, Ph.D.
+ */
 public class VcfLookup {
 
 //    public static final String SER_FILE = "vcf.ser";
@@ -146,9 +151,14 @@ public class VcfLookup {
             while ((line = reader.readLine()) != null) {
                 if (line.charAt(0) != '#') {
                     String parts[] = line.split("\t");
-                    String ref = parts[0];
+                    String chr = parts[0];
                     String pos = parts[1];
-                    writer.write(ref + "\t" + pos + "\t0\t0\n");
+                    String ref = parts[3];
+                    String alt = parts[4];
+                    String zygosity = Utils.getZygosity(parts[9]);
+                    String varType = Utils.getVarType(ref, alt);
+//                    writer.write(chr + "\t" + pos + "\t0\t0\n");
+                    writer.write(chr + "\t" + pos + "\t" + zygosity + "\t" + varType + "\n");
                 }
             }
         } catch (Exception ex) {

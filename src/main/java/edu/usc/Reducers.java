@@ -15,6 +15,8 @@ import org.apache.hadoop.io.ArrayPrimitiveWritable;
 
 /**
  * Placeholder class for the Reducers. Currently no functionality here.
+ *
+ * @author Gary Chen, Ph.D.
  */
 public class Reducers {
 }
@@ -66,10 +68,8 @@ class BinReducer
             boolean in_vcf = allele == 0;
             if (binMapInVcf.get(bp) == null) {
                 binMapInVcf.put(bp, in_vcf);
-            } else {
-                if (in_vcf) {
-                    binMapInVcf.put(bp, in_vcf);
-                }
+            } else if (in_vcf) {
+                binMapInVcf.put(bp, in_vcf);
             }
             Float depth = Float.valueOf(parts[p++]);
             if (binMapDepth.get(bp) == null) {
