@@ -99,7 +99,8 @@ class BinReducer
             boolean intersect_vcf = binMapInVcf.get(bp) && pos_depth > 0;
             //if(pos_depth<20 || baf<0.1) baf = 0f;
             if (intersect_vcf) {
-                float baf = (pos_depth - maxDepth) / pos_depth;
+            //######  A previous bug fixed #####
+                float baf = (pos_depth - maxDepth) / maxDepth;
                 bafSet.add(baf);
             }
             depthSet.add(pos_depth);
