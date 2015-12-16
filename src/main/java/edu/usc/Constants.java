@@ -23,7 +23,7 @@ public class Constants {
      * The min quality score for a base to be considered mapped. 0 is worst, 1
      * is best
      */
-    public static final double base_quality_threshold = .99;
+    public static final double base_quality_threshold = 0;
 
     /**
      * The number of base pairs to be considered as a single data point in the
@@ -47,7 +47,7 @@ public class Constants {
      * value of zero means no penalty, and a negative penalty instructs the
      * program to estimates this penalty as the SD of the overall signal.
      */
-    public static final float abberration_penalty = 0f;
+    public static final float abberration_penalty = 0.3f;
     /**
      * This penalty corresponds to the L1 penalty for transitions between
      * states. A higher value enforces a model with longer blocks of
@@ -55,7 +55,7 @@ public class Constants {
      * instructs the program to estimates this penalty as the 2*SD of the
      * overall signal.
      */
-    public static final float transition_penalty = -1f;
+    public static final float transition_penalty = 0.4f;
     /**
      * Alpha is the BAF mixture proportion in emission model. 0 means place all
      * weight on the contribution from the overall signal and 1 means place all

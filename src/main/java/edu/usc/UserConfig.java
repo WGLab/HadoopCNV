@@ -121,7 +121,13 @@ public class UserConfig {
     public static int getReducerTasks() {
         return Integer.parseInt(getConfig("REDUCER_TASKS").trim());
     }
-
+    public static float getAbberationPenalty(){
+    	return Float.parseFloat(getConfig("ABBERATION_PENALTY").trim());
+    }
+    public static float getTransitionPenalty(){
+    	return Float.parseFloat(getConfig("TRANSITION_PENALTY").trim());
+    }
+    
     private static String getConfig(String key) {
         return prop.getProperty(key);
     }

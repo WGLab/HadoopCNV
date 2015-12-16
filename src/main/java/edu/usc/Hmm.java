@@ -21,7 +21,7 @@ import org.apache.hadoop.io.Text;
 public class Hmm {
 
     private String refName;
-    private final int states = 4;
+    private final int states = 6;
     private int markers;
     private int[] ranges;
     private float[] data;
@@ -31,17 +31,18 @@ public class Hmm {
     private float[] loss_mat;
     private float[] scaled_depth;
     private float mean_coverage;
-    private final float[] mu = {-.5f, 0, 0, .5f};
-    private final int[] cn_arr = {1, 2, 2, 3};
+    private final float[] mu = {-1.0f, -0.5f, 0, 0, 0.5f, 1.0f};
+    private final int[] cn_arr = {0, 1, 2, 2, 3, 4};
     private int[] best_state;
     private float alpha = Constants.alpha;
-    private float lambda1 = Constants.abberration_penalty;
-    private float lambda2 = Constants.transition_penalty;
-
+    private float lambda1 ;
+    private float lambda2 ;
+    /*
     private static final int STATE_SINGLE_DEL = 0;
     private static final int STATE_CN_LOH = 1;
     private static final int STATE_NORMAL = 2;
     private static final int STATE_SINGLE_DUP = 3;
+    */
 
     public Hmm(int markers) {
         this.markers = markers;
@@ -90,10 +91,11 @@ public class Hmm {
         float sd = get_sd();
         System.err.println("Standard deviation is " + sd);
         if (this.lambda1 < 0) {
-            this.lambda1 = sd;
+            this.lambda1 = 2 * sd;
         }
         if (this.lambda2 < 0) {
-            this.lambda2 = 2 * sd * (float) Math.sqrt(Math.log(markers));
+           // this.lambda2 = sd * (float) Math.sqrt(Math.log(markers));
+        	this.lambda2 = 5 * sd;
         }
         System.err.println("Chr " + refName + " lambda 1 and 2 are " + lambda1 + " and " + lambda2);
     }
@@ -119,12 +121,15 @@ public class Hmm {
     private void scale_depth() {
         for (int i = 0; i < markers; ++i) {
             scaled_depth[i] = (data[i * 2] - mean_coverage) / mean_coverage;
-            if (scaled_depth[i] < -.5) {
-                scaled_depth[i] = -.5f;
+            
+            
+            if (scaled_depth[i] < -2f) {
+                scaled_depth[i] = -2f;
             }
-            if (scaled_depth[i] > .5) {
-                scaled_depth[i] = .5f;
+            if (scaled_depth[i] > 2f) {
+                scaled_depth[i] = 2f;
             }
+            
         }
 
     }
@@ -328,12 +333,15 @@ public class Hmm {
      * @param refName The Chromosome name
      * @param it_text The various bin regions, and their associated intensities
      */
-    public void init(String refName, Iterator<Text> it_text) {
+    public void init(String refName, Iterator<Text> it_text, float l1, float l2) {
         this.refName = refName;
         List<Integer> start = new ArrayList<>();
         List<Integer> end = new ArrayList<>();
         List<Float> depth = new ArrayList<>();
         List<List<Float>> baf = new ArrayList<>();
+        PennCnvSeq pennCnv = new PennCnvSeq();
+        this.lambda1 = l1;
+        this.lambda2 = l2;
         int sites = 0;
         mean_coverage = 0;
 
@@ -472,7 +480,9 @@ public class Hmm {
                     + "\t" + Float.toString(baf_mat[marker * states + 0])
                     + "\t" + Float.toString(baf_mat[marker * states + 1])
                     + "\t" + Float.toString(baf_mat[marker * states + 2])
-                    + "\t" + Float.toString(baf_mat[marker * states + 3]);
+                    + "\t" + Float.toString(baf_mat[marker * states + 3])
+                    + "\t" + Float.toString(baf_mat[marker * states + 4])
+                    + "\t" + Float.toString(baf_mat[marker * states + 5]);
             ++marker;
             return res;
         }

@@ -24,54 +24,54 @@ public class Utils {
                 geno = "0";
                 break;
             case "0/1":
-                geno = "1";
+                geno = "-1";
                 break;
             case "0|1":
-                geno = "1";
+                geno = "-1";
                 break;
             case "1/0":
-                geno = "1";
+                geno = "-1";
                 break;
             case "1|0":
-                geno = "1";
+                geno = "-1";
                 break;
             case "0/2":
-                geno = "1";
+                geno = "-1";
                 break;
             case "0|2":
-                geno = "1";
+                geno = "-1";
                 break;
             case "2/0":
-                geno = "1";
+                geno = "-1";
                 break;
             case "2|0":
-                geno = "1";
+                geno = "-1";
                 break;
             case "1/1":
-                geno = "2";
+                geno = "-2";
                 break;
             case "1|1":
-                geno = "2";
+                geno = "-2";
                 break;
             case "1/2":
-                geno = "1";
+                geno = "-1";
                 break;
             case "1|2":
-                geno = "1";
+                geno = "-1";
                 break;
             case "2/1":
                 System.err.println("\nWarning in getHomOrHetStatus with geno: " + tmpGeno + ".");
-                geno = "1";
+                geno = "-1";
                 break;
             case "2|1":
-                geno = "1";
+                geno = "-1";
                 break;
             case "2/2":
                 System.err.println("\nWarning in getHomOrHetStatus with geno: " + tmpGeno + ".");
-                geno = "2";
+                geno = "-2";
                 break;
             case "2|2":
-                geno = "2";
+                geno = "-2";
                 break;
             default:
                 geno = "-9";
@@ -85,12 +85,12 @@ public class Utils {
 
     // snv: 1, indel: 2
     public static String getVarType(String ref, String alt) {
-        String varType = "1";
+        String varType = "0";
         if ((!ref.equalsIgnoreCase("N")) && (ref.matches("^[AGCT\\.]+$") && alt.matches("^[AGCT\\.]+$"))) {
             if ((ref.length() == 1) && (alt.length() == 1)) {
-                varType = "1";
+                varType = "0";
             } else {
-                varType = "2";
+                varType = "1";
             }
         }
 

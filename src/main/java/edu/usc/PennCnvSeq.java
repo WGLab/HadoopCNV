@@ -33,6 +33,7 @@ import org.seqdoop.hadoop_bam.AnySAMInputFormat;
  *
  * @author Gary Chen, Ph.D.
  * @revised by Max He, Ph.D.
+ * @improved by Hui Yang, Ph.D.
  */
 public class PennCnvSeq extends Configured implements Tool {
 
@@ -42,8 +43,7 @@ public class PennCnvSeq extends Configured implements Tool {
     Path bamfile, vcffile;
     String bamfileStr, vcffileStr;
     static long startTime, endTime;
-    boolean debug = false;  // true;
-
+    boolean debug = true;  // true;
     /**
      * The default constructor for PennCvnSeq. No other initializations occur
      * here.
@@ -98,6 +98,8 @@ public class PennCnvSeq extends Configured implements Tool {
 //            }
 //            System.exit(0);
 //
+            float abberation_penalty = UserConfig.getAbberationPenalty();
+        	float transition_penalty = UserConfig.getTransitionPenalty(); 
             int numReduceTasksBig = UserConfig.getBamFileReducers();
             int numReduceTasksSmall = UserConfig.getTextFileReducers();
             boolean runVcfLookup = UserConfig.getInitVcf();
@@ -106,6 +108,8 @@ public class PennCnvSeq extends Configured implements Tool {
             boolean runCnvCallJob = UserConfig.getRunCnvCaller();
             boolean runGlobalSortJob = UserConfig.getRunGlobalSort();
             int numRecudeTasks = UserConfig.getReducerTasks();
+            System.err.println("L1: "+UserConfig.getAbberationPenalty() );
+            System.err.println("L2: "+UserConfig.getTransitionPenalty() );
             if (debug) {
                 System.err.println("numReduceTasksBig: " + numReduceTasksBig
                         + " numReduceTasksSmall: " + numReduceTasksSmall
@@ -266,6 +270,8 @@ public class PennCnvSeq extends Configured implements Tool {
             }
 
             if (runCnvCallJob) {
+            	conf.set("lambda1", Float.toString(abberation_penalty));
+            	conf.set("lambda2", Float.toString(transition_penalty));
                 Job secondarySortJob = Job.getInstance(conf, "Secondary Sort Job");
                 secondarySortJob.setJobName("secondary_sorter");
                 secondarySortJob.setJarByClass(PennCnvSeq.class);

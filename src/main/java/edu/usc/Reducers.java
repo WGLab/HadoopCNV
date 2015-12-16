@@ -12,6 +12,7 @@ import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.ArrayPrimitiveWritable;
+import org.apache.hadoop.conf.Configuration;
 
 /**
  * Placeholder class for the Reducers. Currently no functionality here.
@@ -29,11 +30,14 @@ class BinReducer
         extends Reducer<RefBinKey, Text, RefBinKey, Text> {
 
     private final Text retText = new Text();
-    private final Map<Integer, Boolean> binMapInVcf = new HashMap<>();
+    //binMapInVcf saves information about whether each bp is in the VCF file
+    private final Map<Integer, Integer> binMapInVcf = new HashMap<>();
+    
     private final Map<Integer, List<Float>> binMapDepth = new HashMap<>();
     private final Set<Float> depthSet = new TreeSet<>();
-    private final Set<Float> bafSet = new TreeSet<>();
-    private final double[] mse_states = new double[4];
+    private final List<Float> bafList = new ArrayList<>();
+    private final List<Integer> hetList = new ArrayList<>();
+    private final double[] mse_states = new double[6];
 
     /**
      * @param inkey A composite key consisting of Chromosome and Bin ID (first
@@ -55,6 +59,7 @@ class BinReducer
         int endbp = Integer.MIN_VALUE;
         while (it.hasNext()) {
             Text text = it.next();
+            // parts[0]:pos, parts[1]:allele, parts[2]:depth
             String[] parts = text.toString().split("\t");
             int p = 0;
             Integer bp = Integer.decode(parts[p++]);
@@ -65,10 +70,10 @@ class BinReducer
                 startbp = bp;
             }
             int allele = Integer.parseInt(parts[p++]);
-            boolean in_vcf = allele == 0;
+            int in_vcf = allele;
             if (binMapInVcf.get(bp) == null) {
                 binMapInVcf.put(bp, in_vcf);
-            } else if (in_vcf) {
+            } else if (in_vcf <= 0) {
                 binMapInVcf.put(bp, in_vcf);
             }
             Float depth = Float.valueOf(parts[p++]);
@@ -82,63 +87,91 @@ class BinReducer
         }
         Iterator<Integer> it_keys = binMapDepth.keySet().iterator();
         depthSet.clear();
-        bafSet.clear();
+        bafList.clear();
+        hetList.clear();
         double total_depth = 0;
         int n = 0;
+        
         while (it_keys.hasNext()) {
             Integer bp = it_keys.next();
             Iterator<Float> depthListIterator = binMapDepth.get(bp).iterator();
-            float maxDepth = 0, pos_depth = 0;
+            float maxDepth = 0, pos_total_depth = 0;
+            
+            /* This step is to add all depths together within a bin,
+             * pos_total_depth is the summed depth of a specific position,
+             * maxDepth is the major allele depth */
             while (depthListIterator.hasNext()) {
                 float depth = depthListIterator.next();
-                pos_depth += depth;
+                pos_total_depth += depth;
                 if (depth > maxDepth) {
                     maxDepth = depth;
                 }
             }
-            boolean intersect_vcf = binMapInVcf.get(bp) && pos_depth > 0;
+            /* If one record is from VCF file, the record in binMapInVcf is less than 0
+             *  0  ->  homozygous
+             * -1  ->  heterozygous
+             * -2  ->  homozygous for alternative allele
+             * -9  ->  unknown
+             */
+            int het_status = binMapInVcf.get(bp);
+            boolean intersect_vcf = het_status <=0 && pos_total_depth > 0;
             //if(pos_depth<20 || baf<0.1) baf = 0f;
             if (intersect_vcf) {
             //######  A previous bug fixed #####
-                float baf = (pos_depth - maxDepth) / maxDepth;
-                bafSet.add(baf);
+            	
+                float baf = (pos_total_depth - maxDepth) / pos_total_depth;
+                bafList.add(baf);
+                hetList.add(het_status);
             }
-            depthSet.add(pos_depth);
-            total_depth += pos_depth;
+            depthSet.add(pos_total_depth);
+            total_depth += pos_total_depth;
             ++n;
         }
         // we should always add a dummy BAF in case no VCF entries in this bin
-        if (bafSet.isEmpty()) {
-            bafSet.add(0f);
+        if (bafList.size()==0) {
+            bafList.add(0f);
+            hetList.add(0);
         }
-        int baf_n = bafSet.size();
+        int baf_n = bafList.size();
         double mean_depth = (n > 0) ? total_depth / n : 0;
+        
         Iterator<Float> depthSetIt = depthSet.iterator();
-        Iterator<Float> bafSetIt = bafSet.iterator();
+        Iterator<Float> bafListIt = bafList.iterator();
         float medianDepth = 0;
-        float medianBaf = 0;
         for (int i = 0; i < depthSet.size() / 2; ++i) {
             medianDepth = depthSetIt.next();
         }
-        //state 0 = CN=1
-        //state 1 = CN=2 LOH
-        //state 2 = CN=2 Normal
-        //state 3 = CN=3 
-        for (int i = 0; i < 4; ++i) {
+        //state 0 = CN=0
+        //state 1 = CN=1
+        //state 2 = CN=2 LOH
+        //state 3 = CN=2 Normal
+        //state 4 = CN=3
+        //state 5 = CN=4
+        for (int i = 0; i < mse_states.length; ++i) {
             mse_states[i] = 0;
         }
         int currentIter = 0;
+        
         int exp_het_index = (int) ((1f - Constants.min_heterozygosity) * baf_n);
-        while (bafSetIt.hasNext()) {
-            float currentBaf = bafSetIt.next();
-            if (currentIter == (baf_n / 2)) {
-                medianBaf = currentBaf;
-            }
+        while (bafListIt.hasNext()) {
+            float currentBaf = bafListIt.next();
+            int currentHet = hetList.get(currentIter);
             float currentBaf2 = currentBaf * currentBaf;
-            mse_states[0] += currentBaf2;
+            mse_states[0] += Math.min(currentBaf2, Math.min((0.5 - currentBaf) * (0.5 - currentBaf), (0.25 - currentBaf)*(0.25 - currentBaf) ));
             mse_states[1] += currentBaf2;
-            mse_states[2] += currentIter >= exp_het_index ? (.5 - currentBaf) * (.5 - currentBaf) : currentBaf2;
-            mse_states[3] += currentIter >= exp_het_index ? (.33 - currentBaf) * (.33 - currentBaf) : currentBaf2;
+            if(currentHet == -1)
+            {
+            	mse_states[2] +=  currentBaf2;
+            	mse_states[3] += (0.5 - currentBaf) * (0.5 - currentBaf);
+            	mse_states[4] += (0.33 - currentBaf)*(0.33 - currentBaf);
+            	mse_states[5] += Math.min( (0.25 - currentBaf)*(0.25 - currentBaf), (0.5-currentBaf)*(0.5-currentBaf) );
+            }
+            else{
+            	mse_states[2] += currentBaf2;
+            	mse_states[3] += currentBaf2;
+            	mse_states[4] += currentBaf2;
+            	mse_states[5] += currentBaf2;
+            }
             if (debug) {
                 System.err.println("DEBUG: currentIter: " + currentIter + " exp_het_index: " + exp_het_index);
             }
@@ -147,14 +180,21 @@ class BinReducer
             ++currentIter;
         }
         if (baf_n > 0) {
-            for (int i = 0; i < 4; ++i) {
+            for (int i = 0; i < mse_states.length; ++i) {
                 mse_states[i] /= baf_n;
             }
         }
-        String bafVecStr = mse_states[0] + "\t" + mse_states[1] + "\t" + mse_states[2] + "\t" + mse_states[3];
+        String bafVecStr = mse_states[0] + "\t" + mse_states[1] + "\t" + mse_states[2] + "\t"
+        				 + mse_states[3] + "\t" + mse_states[4] + "\t" + mse_states[5];
         //System.err.println("BIN REDUCER: depthsetsize: "+depthSet.size()+" bafsetsize: "+bafSet.size()+" median depth: "+medianDepth+" median baf: "+medianBaf);
         // for median depth
-        //retText.set(Integer.toString(startbp)+"\t"+Integer.toString(endbp)+"\t"+Double.toString(medianDepth)+"\t"+Double.toString(medianBaf)+"\t"+Double.toString(total_depth)+"\t"+Integer.toString(n));
+        /*  startbp  ->  start position
+         *  endbp    ->  end position
+         *  medianDepth  ->  median of depth within this bin
+         *  bafVecStr  ->  the baf errror infomation
+         *  total_depth
+         *  n
+         */
         retText.set(Integer.toString(startbp) + "\t" + Integer.toString(endbp) + "\t" + Double.toString(medianDepth) + "\t" + bafVecStr + "\t" + Double.toString(total_depth) + "\t" + Integer.toString(n));
         ctx.write(inkey, retText);
     }
@@ -181,10 +221,13 @@ class CnvReducer
     protected void reduce(RefBinKey inkey, Iterable<Text> invals,
             Reducer<RefBinKey, Text, Text, Text>.Context ctx)
             throws InterruptedException, IOException {
+    	Configuration conf = ctx.getConfiguration();
+    	float lambda1 = Float.parseFloat(conf.get("lambda1"));
+    	float lambda2 = Float.parseFloat(conf.get("lambda2"));
         Iterator<Text> it_text = invals.iterator();
         if (it_text.hasNext()) {
             Hmm hmm = new Hmm();
-            hmm.init(inkey.getRefName(), it_text);
+            hmm.init(inkey.getRefName(), it_text, lambda1, lambda2);
 
             hmm.run();
             Iterator<String> it_res = hmm.getResults();
@@ -289,7 +332,8 @@ class AlleleDepthWindowReducer
                         if (debug) {
                             System.err.print(" " + allele);
                         }
-                        double qual = 1. - Math.pow(10, -basequal * .1);
+                        //double qual = 1. - Math.pow(10, -basequal * .1);
+                        double qual = 1.0;
                         if (qual > quality_threshold) {
                             //qual = 1.0;
                             Map<Integer, Double> map = qualitymap_list.get(i);

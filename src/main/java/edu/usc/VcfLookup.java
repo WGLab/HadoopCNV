@@ -155,10 +155,18 @@ public class VcfLookup {
                     String pos = parts[1];
                     String ref = parts[3];
                     String alt = parts[4];
-                    String zygosity = Utils.getZygosity(parts[9]);
+                    String zygosity;
+                    if(parts.length >= 10){
+                    	zygosity = Utils.getZygosity(parts[9]);
+                    }
+                    else{
+                    	zygosity = "0";
+                    }
                     String varType = Utils.getVarType(ref, alt);
 //                    writer.write(chr + "\t" + pos + "\t0\t0\n");
-                    writer.write(chr + "\t" + pos + "\t" + zygosity + "\t" + varType + "\n");
+                    if(varType.equals("0") ){
+                        writer.write(chr + "\t" + pos + "\t" + zygosity + "\t" + varType + "\n");
+                    }
                 }
             }
         } catch (Exception ex) {
