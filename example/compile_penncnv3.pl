@@ -18,11 +18,11 @@ while(<>){
     }
     if($copy_num >2) { 
     	$type = "duplication"; 
-    	push @dups, [$chr, $start, $end];
+    	push @dups, [$chr, $start, $end, $copy_num];
     }
     elsif($copy_num <2) { 
     	$type = "deletion"; 
-    	push @dels, [$chr, $start, $end];
+    	push @dels, [$chr, $start, $end, $copy_num];
     }
     else { next; }
 	
@@ -41,8 +41,8 @@ sub merge {
 				push @new_cnvs, $cnv;
 				next;
 			}
-			my ($chr, $start, $end) = @$cnv;
-			my ($p_chr, $p_start, $p_end) =  @{$new_cnvs[-1]};
+			my ($chr, $start, $end, $copy_num) = @$cnv;
+			my ($p_chr, $p_start, $p_end, $p_copy_num) =  @{$new_cnvs[-1]};
 			if ($chr ne $p_chr){
 				push @new_cnvs, $cnv;
 				next;
@@ -50,13 +50,13 @@ sub merge {
 			else{
 				my $interval = $start-$p_end;
 				my $total = $end - $start +1 + $p_end - $p_start + 1;
-				if ($interval/($total+0.0) <= $THRESHOLD ){
+				if ($interval/($total+0.0) <= $THRESHOLD and $copy_num == $p_copy_num){
 					$merged++;
 					pop @new_cnvs;
-					push @new_cnvs,[$chr,$p_start,$end];
+					push @new_cnvs,[$chr,$p_start,$end, $copy_num];
 				}
 				else{
-					push @new_cnvs,[$chr,$start,$end];
+					push @new_cnvs,[$chr,$start,$end, $copy_num];
 				}
 			}
 		}
@@ -72,16 +72,16 @@ sub merge {
 @dels = merge(\@dels);
 @dups = merge(\@dups);
 for my $cnv (@dels){
-	my ($chr, $start, $end) = @$cnv;
+	my ($chr, $start, $end, $copy_num) = @$cnv;
 	my $len = $end-$start+1;
 	next if($len < $LEN_THRE);
-	print join("\t", ("deletion", "$chr:$start-$end") )."\n";
+	print join("\t", ("deletion", "$chr:$start-$end\tCN:$copy_num") )."\n";
 }
 for my $cnv (@dups){
-	my ($chr, $start, $end) = @$cnv;
+	my ($chr, $start, $end, $copy_num) = @$cnv;
 	my $len = $end-$start+1;
 	next if($len < $LEN_THRE);
-	print join("\t", ("duplication", "$chr:$start-$end") )."\n";
+	print join("\t", ("duplication", "$chr:$start-$end\tCN:$copy_num") )."\n";
 }
 
 

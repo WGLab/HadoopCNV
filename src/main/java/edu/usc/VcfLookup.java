@@ -10,7 +10,8 @@ import java.io.FileInputStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
-
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 /*
  *
  * @author Gary Chen, Ph.D.
@@ -150,8 +151,14 @@ public class VcfLookup {
             writer = new BufferedWriter(new OutputStreamWriter(fileSystem.create(path)));
             while ((line = reader.readLine()) != null) {
                 if (line.charAt(0) != '#') {
+                	line = line.replace("\n", "").replace("\r", "");
                     String parts[] = line.split("\t");
                     String chr = parts[0];
+                    Pattern p = Pattern.compile("^chr");
+                    Matcher m = p.matcher(chr);
+                    if(!m.lookingAt()) {
+                    	chr = "chr" + chr;
+                    }
                     String pos = parts[1];
                     String ref = parts[3];
                     String alt = parts[4];

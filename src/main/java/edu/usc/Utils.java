@@ -14,8 +14,9 @@ public class Utils {
     // hom: 2, het: 1
     public static String getZygosity(String tmpGeno) {
         String geno;
-
-        tmpGeno = tmpGeno.substring(0, tmpGeno.indexOf(":"));
+        if(tmpGeno.indexOf(":") != -1) {
+            tmpGeno = tmpGeno.substring(0, tmpGeno.indexOf(":"));
+        }
         switch (tmpGeno) {
             case "0/0":
                 geno = "0";

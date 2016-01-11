@@ -334,7 +334,7 @@ class AlleleDepthWindowReducer
                         }
                         //double qual = 1. - Math.pow(10, -basequal * .1);
                         double qual = 1.0;
-                        if (qual > quality_threshold) {
+                        if (qual >= quality_threshold) {
                             //qual = 1.0;
                             Map<Integer, Double> map = qualitymap_list.get(i);
                             Double val; // = null;

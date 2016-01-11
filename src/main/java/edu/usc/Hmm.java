@@ -175,22 +175,27 @@ public class Hmm {
      */
     private void do_viterbi() {
         int[] traceback = new int[markers * states];
-        float min = Float.MAX_VALUE;
+        float min;
         for (int state = 0; state < states; ++state) {
             loss_mat[state] = (1 - alpha) * lrr_mat[state] + alpha * baf_mat[state] + lambda1 * Math.abs(mu[state]);
-            if (loss_mat[state] < min) {
-                min = loss_mat[state];
-            }
         }
         for (int marker = 1; marker < markers; ++marker) {
-            float dist = 1;
             for (int current = 0; current < states; ++current) {
                 min = Float.MAX_VALUE;
+                float lambda1_new = lambda1;
+                float lambda2_new = lambda2;
                 float loss; // = 0;
                 for (int prev = 0; prev < states; ++prev) {
-                    loss = loss_mat[(marker - 1) * states + prev] + (1 - alpha) * lrr_mat[marker * states
-                            + current] + alpha * baf_mat[marker * states + current] + lambda1
-                            * Math.abs(mu[current]) + lambda2 * (dist) * Math.abs(mu[current] - mu[prev]);
+                	/*
+                	if(current == 0 || current == 1){
+                		lambda1_new = 1.5f * lambda1;
+                		lambda2_new = 1.2f * lambda2;
+                	}
+                	*/
+                    loss = loss_mat[(marker - 1) * states + prev] 
+                    		+ (1 - alpha) * lrr_mat[marker * states + current]
+                    		+ alpha * baf_mat[marker * states + current] +
+                    		lambda1_new * Math.abs(mu[current]) + lambda2_new * Math.abs(mu[current] - mu[prev]);
                     if (loss < min) {
                         min = loss;
                         loss_mat[marker * states + current] = min;
@@ -201,8 +206,8 @@ public class Hmm {
                     System.err.println("A Failed to find minimum:");
                     for (int prev = 0; prev < states; ++prev) {
                         loss = loss_mat[(marker - 1) * states + prev] + (1 - alpha) * lrr_mat[marker * states
-                                + current] + alpha * baf_mat[marker * states + current] + lambda1
-                                * Math.abs(mu[current]) + lambda2 * (dist) * Math.abs(mu[current] - mu[prev]);
+                                + current] + alpha * baf_mat[marker * states + current] + lambda1_new
+                                * Math.abs(mu[current]) + lambda2_new * Math.abs(mu[current] - mu[prev]);
                         System.err.println(" " + prev + "," + loss);
                     }
                     System.err.println();

@@ -11,6 +11,9 @@ import org.apache.hadoop.io.LongWritable;
 import htsjdk.samtools.SAMRecord;
 import htsjdk.samtools.AlignmentBlock;
 import org.seqdoop.hadoop_bam.SAMRecordWritable;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 
 /**
  * Placeholder class for Mappers. Currently no functionality here.
@@ -125,6 +128,12 @@ class SAMRecordWindowMapper extends Mapper<LongWritable, SAMRecordWritable, RefB
         // regular intervals
         SAMRecord samrecord = inval.get();
         String refname = samrecord.getReferenceName();
+        Pattern p = Pattern.compile("^chr");
+        Matcher m = p.matcher(refname);
+        if(!m.lookingAt()) {
+        	refname = "chr" + refname;
+        }
+        
         refBinKey.setRefName(refname);
         String samstr = samrecord.getSAMString();
 
@@ -137,12 +146,13 @@ class SAMRecordWindowMapper extends Mapper<LongWritable, SAMRecordWritable, RefB
         byte[] basequals = samrecord.getBaseQualities();
         int mapqual = samrecord.getMappingQuality();
         double mapprob = 1. - Math.pow(10, -mapqual * .1);
+       
         //System.err.println(" mapquality "+mapprob);
         //System.err.println(" bytelen: "+bases.length);
         //System.err.println(" first base: "+Byte.toString(bases[0]));
         //System.err.println(" cigar: "+samrecord.getCigar().toString());
         //System.err.println(" quality: "+samrecord.getMappingQuality());
-        if (mapprob > Constants.mapping_quality_threshold) {
+        if (mapprob >= Constants.mapping_quality_threshold) {
             List<AlignmentBlock> alignmentBlockList = samrecord.getAlignmentBlocks();
             Iterator<AlignmentBlock> it = alignmentBlockList.iterator();
             for (int j = 0; j < bin_size; ++j) {
@@ -186,16 +196,23 @@ class SAMRecordWindowMapper extends Mapper<LongWritable, SAMRecordWritable, RefB
                     }
                     if (true) {
                         int read_pos_index = readstart0 + i;
-
+   
                         if (debug) {
                             System.err.println(" Storing " + (int) bases[read_pos_index] + " of position " + read_pos_index + " into " + ((refpos_0) % bin_size) * 2);
                         }
-                        read_info[((refpos_0) % bin_size) * 2] = bases[read_pos_index];
-                        read_info[((refpos_0) % bin_size) * 2 + 1] = basequals[read_pos_index];
+                        if(read_pos_index < bases.length)
+                        {
+                        	read_info[((refpos_0) % bin_size) * 2] = bases[read_pos_index];
+                        	read_info[((refpos_0) % bin_size) * 2 + 1] = basequals[read_pos_index];
+                        }
+                        else{
+                        	read_info[((refpos_0) % bin_size) * 2] = (byte) 'A';
+                        	read_info[((refpos_0) % bin_size) * 2 + 1] = 1;
+                        }
                     }
-                    last_bin = current_bin;
+                    last_bin = current_bin;  
                 }
-                if (last_bin != -1) {
+                if (last_bin != -1) { 
                     // we have already populated at least one bin so output it
                     // Remember that this current bin is zero-based indexed!
                     refBinKey.setBin(last_bin);
