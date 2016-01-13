@@ -6,7 +6,7 @@ VCF_FILE: VCF/LID57250.vcf
 # following are the pipeline components that should be run.
 RUN_DEPTH_CALLER: true
 RUN_GLOBAL_SORT: false
-INIT_VCF_LOOKUP: false
+INIT_VCF_LOOKUP: true
 RUN_BINNER: true
 RUN_CNV_CALLER: true
 # We want the number of BAM file reducers to be approximately equal
