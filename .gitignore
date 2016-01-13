@@ -2,4 +2,7 @@ example/*
 !example/config.txt
 !example/compile_penncnv3.pl
 !example/run.sh
+!example/hg19.extra.bam
+!example/preprocessBAM.py
+!example/run_all.pl
 target/
