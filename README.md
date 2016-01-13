@@ -8,12 +8,12 @@ In addition to single nucleotide variants (SNVs) and small insertions or deletio
 
 ## Setup
 
-To setup the environment for HadoopCNV, you need to install Hadoop2.0+ in your computer or cluster first. Please refer to ![Initialization](docs/initialization.md)
+To setup the environment for HadoopCNV, you need to install Hadoop2.0+ in your computer or cluster first. Please refer to [Initialization](docs/initialization.md)
 
 ## Example
 
 After initialization, to run HadoopCNV, please check our example first:
-![Example](doc/example.md)
+[Example](doc/example.md)
 
 ## Workflow
 
