@@ -21,7 +21,7 @@ You need a *VCF* file and a *BAM* file to call CNVs from your sample.
 
 1) *VCF*: this refers to Variant Calling Format. You need to check GATK or Samtools or any small variant calling tool for your sampl.
 
-2) "BAM": this is the alignment file for your sequencing sample.
+2) *BAM*: this is the alignment file for your sequencing sample.
 
 In general, after you compile HadoopCNV succesfully and setup your Hadoop environment, it is very easy to run it:
 
