@@ -27,9 +27,9 @@ In general, after you compile HadoopCNV succesfully and setup your Hadoop enviro
 
 1) Put the BAM file in HDFS and VCF file in your local file system. In **config.txt**, set the correct path for **BAM_FILE** and **VCF_FILE**.
 
-NOTICE: Sometimes you have your individual BAM files for each individual chromosome. You can use a '*' to include many BAM files.
+NOTICE: Sometimes you have your individual BAM files for each individual chromosome. You can use a '\*' to include many BAM files.
 
-For example, my NA12878 BAM file name is in the 'NA12878.chrom*.ILLUMINA.bwa.CEU.high_coverage.20100311.bam' format. The '*' can refer to any character. Thus there is no need to merge your BAM files first anymore.
+For example, my NA12878 BAM file name is in the 'NA12878.chrom\*.ILLUMINA.bwa.CEU.high_coverage.20100311.bam' format. The '\*' can refer to any character. Thus there is no need to merge your BAM files first anymore.
 
 2) In general, there is no need to change any other parameters in the config.txt file. 
 
