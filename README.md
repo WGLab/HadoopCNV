@@ -64,7 +64,7 @@ Then use Samtools to generate index:
 
 ## Workflow
 
-![HadoopCNV Workflow](docs/images/PennCNV3.png "HadoopCNV Workflow")
+![HadoopCNV Workflow](docs/img/PennCNV3.png "HadoopCNV Workflow")
 
 ## Reference
 
