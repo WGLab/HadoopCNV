@@ -12,12 +12,12 @@ A formal documentation for HadoopCNV can be accessed [here](http://hadoopcnv.ope
 
 ## Setup
 
-To setup the environment for HadoopCNV, you need to install Hadoop2.0+ in your computer or cluster first. Please refer to [Initialization](docs/initialization.md)
+To setup the environment for HadoopCNV, you need to install Hadoop2.0+ in your computer or cluster first. Please refer to [Initialization](docs/user-guide/initialization.md)
 
 ## Example
 
 After initialization, to run HadoopCNV, please check our example first:
-[Example](docs/example.md)
+[Example](docs/user-guide/startup.md)
 
 ## Input
 
