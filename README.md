@@ -4,7 +4,7 @@
 
 HadoopCNV (internal codename: PennCNV3) is a Java implementation of MapReduce-based copy number variation caller for next-generation whole-genome sequencing data.
 
-In addition to single nucleotide variants (SNVs) and small insertions or deletions (INDELs), whole-genome sequencing (WGS) data may also be used to identify large-scale alterations, such as copy number variations (CNVs) and other types of structural variants (SVs).  Existing CNV detection methods mostly rely on read depth or paired end distance or the combination thereof.  Additionally, resolving small regions in WGS samples with deep coverage can be very time consuming due to massive I/O cost. To facilitate the CNV detection from WGS data, we developed HadoopCNV, a hidden Markov model based algorithm, which infers detects aberration events such as copy number changes through information encoded in both allelic and overall read depth.  Our implementation is built on the Hadoop MapReduce paradigm, enabling parallel multiple processors at multiple nodes to efficiently process separate genomic regions in tandem. We also employ a Viterbi scoring algorithm to infer the most likely copy number/heterozygosity state for each region of the genome. 
+In addition to single nucleotide variants (SNVs) and small insertions or deletions (INDELs), whole-genome sequencing (WGS) data may also be used to identify large-scale alterations, such as copy number variations (CNVs) and other types of structural variants (SVs).  Existing CNV detection methods mostly rely on read depth or paired end distance or the combination thereof.  Additionally, resolving small regions in WGS samples with deep coverage can be very time consuming due to massive I/O cost. To facilitate the CNV detection from WGS data, we developed HadoopCNV, a Dynamic Programming Imputation based algorithm, which infers detects aberration events such as copy number changes through information encoded in both allelic and overall read depth.  Our implementation is built on the Hadoop MapReduce paradigm, enabling parallel multiple processors at multiple nodes to efficiently process separate genomic regions in tandem. Extensive benchmarking studies on real and simulated data demonstrated that HadoopCNV has a comparable or better performance than leading CNV callers for WGS data. Additionally, HadoopCNV on a 32-node cluster requires only 1.6 hours for a human genome with 30X coverage, making rapid analysis on thousands of genomes feasible.
 
 ## Setup
 
@@ -68,8 +68,8 @@ Then use Samtools to generate index:
 
 ## Reference
 
-Yang H, Chen G, Lima L, Fang H, Jimenez L, Li M, Lyon GJ, He M, Wang K. HadoopCNV : A Scalable Solution for Accurate Detection of Copy Number Variations from Whole-Genome Sequencing Data.
+Yang H, Chen G, Lima L, Fang H, Jimenez L, Li M, Lyon GJ, He M, Wang K. HadoopCNV: A dynamic programming imputation algorithm to detect copy number variants from sequencing data
 
 ## License
 
-[MIT License](http://wglab.mit-license.org)
+[WGLab MIT License](http://wglab.mit-license.org) is used for HadoopCNV.
