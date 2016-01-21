@@ -12,9 +12,9 @@ docs_dir: docs/
 include_search: true
 
 pages:
-- SVGen: index.md
+- Home: index.md
 - User Guide:
-  - Download SVGen: user-guide/download.md
+  - Download: user-guide/download.md
   - Initialize Hadoop: user-guide/initialization.md
   - Quick Start-Up Guide: user-guide/startup.md
   - Manual: user-guide/manual.md
