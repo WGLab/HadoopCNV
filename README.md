@@ -46,7 +46,7 @@ Then use [Samtools](http://www.htslib.org/) to transform it to BAM file by:
 
 `samtools -t fasta/chrall.fa.fai <prefix>.extra.sam > NA12878.chrom.ILLUMINA.bwa.CEU.high_coverage.20100311.bam.extra`
 
-NOTICE: <prefix> can be any name you give to the file. 'fasta/chrall.fa.fai' is the fasta index associated with all chromosomes. 
+NOTICE: \<prefix\> can be any name you give to the file. 'fasta/chrall.fa.fai' is the fasta index associated with all chromosomes. 
 
 If you don't have this file in your './fasta' dir, please first concatenate all fasta files into one:
 
