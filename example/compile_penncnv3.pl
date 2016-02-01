@@ -5,6 +5,8 @@ use Pod::Usage;
 our($type);
 my @dels = ();
 my @dups = (); 
+my @lohs = ();
+my $LOH_LEN = 1000000;
 while(<>){
     s/[\r\n]+//g;
     my @words = split("\t");
@@ -23,6 +25,10 @@ while(<>){
     elsif($copy_num <2) { 
     	$type = "deletion"; 
     	push @dels, [$chr, $start, $end, $copy_num];
+    }
+    elsif($copy_num == 2 and $hmm == 2){
+    	$type = "loh";
+    	push @lohs, [$chr, $start, $end, $copy_num];
     }
     else { next; }
 	
@@ -48,7 +54,7 @@ sub merge {
 				next;
 			}
 			else{
-				my $interval = $start-$p_end;
+				my $interval = $start-$p_end-1;
 				my $total = $end - $start +1 + $p_end - $p_start + 1;
 				if ($interval/($total+0.0) <= $THRESHOLD and $copy_num == $p_copy_num){
 					$merged++;
@@ -71,6 +77,19 @@ sub merge {
 		
 @dels = merge(\@dels);
 @dups = merge(\@dups);
+$THRESHOLD = 0;
+@lohs = merge(\@lohs);
+my @new_lohs = ();
+for my $cnv (@lohs){
+	my ($chr, $start, $end, $copy_num) = @$cnv;
+	my $len = $end - $start + 1;
+	if ($len >= $LOH_LEN){
+		push @new_lohs, $cnv;
+	}
+}
+$THRESHOLD = 0.2;
+@lohs = merge(\@new_lohs);
+
 for my $cnv (@dels){
 	my ($chr, $start, $end, $copy_num) = @$cnv;
 	my $len = $end-$start+1;
@@ -82,6 +101,13 @@ for my $cnv (@dups){
 	my $len = $end-$start+1;
 	next if($len < $LEN_THRE);
 	print join("\t", ("duplication", "$chr:$start-$end\tCN:$copy_num") )."\n";
+}
+
+for my $cnv (@lohs){
+	my ($chr, $start, $end, $copy_num) = @$cnv;
+	my $len = $end - $start + 1;
+	next if($len < $LEN_THRE);
+	print join("\t", ( "loh", "$chr:$start-$end\tCN:$copy_num"))."\n";
 }
 
 
