@@ -1,0 +1,25 @@
+site_name: HadoopCNV Documentation
+site_url: http://hadoopcnv.openbioinformatics.org/
+repo_url: https://github.com/WGLab/HadoopCNV/
+repo_name: GitHub
+site_description: Documentation for the HadoopCNV software
+site_author: Hui Yang, Kai Wang
+site_favicon: favicon.ico
+copyright: 2013-2016 HadoopCNV
+google_analytics: ['UA-72708566-1', 'hadoopcnv.openbioinformatics.org']
+
+docs_dir: docs/
+include_search: true
+
+pages:
+- Home: index.md
+- User Guide:
+  - Download: user-guide/download.md
+  - Initialize Hadoop: user-guide/initialization.md
+  - Quick Start-Up Guide: user-guide/startup.md
+  - Manual: user-guide/manual.md
+- Misc:
+  - FAQ: misc/faq.md
+  - What is New: misc/whatsnew.md
+  - Credit: misc/credit.md
+  - How to Contribute: misc/contributing.md
