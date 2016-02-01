@@ -121,7 +121,7 @@ hdfs dfs -help
 The command for launching jobs is
 
 ```
-hadoop jar <program_jar_file -libjars <dependency_jars> <any extra arguments>
+hadoop jar <program_jar_file> -libjars <dependency_jars> <any extra arguments>
 ```
 
 Checking what jobs are running involves invoking YARN:
