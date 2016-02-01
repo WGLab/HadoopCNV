@@ -41,7 +41,7 @@ For example, if your file is called 'NA12878.chrom\*.ILLUMINA.bwa.CEU.high_cover
 
 First put all fasta files of a specific genome into a folder `./fasta`
 
-Then run this script by `python preprocessBAM.py <prefix> ./fasta`. A SAM file will be generated as '<prefix>.extra.sam'.
+Then run this script by `python preprocessBAM.py <prefix> ./fasta`. A SAM file will be generated as '\<prefix\>.extra.sam'.
 Then use [Samtools](http://www.htslib.org/) to transform it to BAM file by: 
 
 `samtools -t fasta/chrall.fa.fai <prefix>.extra.sam > NA12878.chrom.ILLUMINA.bwa.CEU.high_coverage.20100311.bam.extra`
