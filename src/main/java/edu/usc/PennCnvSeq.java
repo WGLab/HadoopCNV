@@ -137,7 +137,6 @@ public class PennCnvSeq extends Configured implements Tool {
 //                this.bamfileStr = UserConfig.getBamFile();
                 this.bamfile = new Path(bamfileStr);
                 System.out.println("Bamfile is at " + bamfile);
-//                Job depthCallJob = new Job(conf);
                 Job depthCallJob = Job.getInstance(conf, "Depth Call Job");
                 depthCallJob.setJobName("depth_caller");
                 depthCallJob.setNumReduceTasks(numReduceTasksBig);
@@ -155,9 +154,8 @@ public class PennCnvSeq extends Configured implements Tool {
                 }
                 depthCallJob.setOutputKeyClass(RefPosBaseKey.class);
                 depthCallJob.setOutputValueClass(DoubleWritable.class);
+                //Delete the depth call directory before processing it
                 FileInputFormat.addInputPath(depthCallJob, bamfile);
-//                fileSystem.delete(new Path("workdir/depth"), true);
-//                FileOutputFormat.setOutputPath(depthCallJob, new Path("workdir/depth"));
                 fileSystem.delete(new Path(depthFolder), true);
                 FileOutputFormat.setOutputPath(depthCallJob, new Path(depthFolder));
                 System.out.println("Submitting read depth caller.");
@@ -173,7 +171,8 @@ public class PennCnvSeq extends Configured implements Tool {
                     System.out.println(runningTime + "\n");
                 }
             }
-
+            
+            //The Global Sort is only for debug purposes 
             if (runGlobalSortJob) {
                 int numReduceTasks = numReduceTasksSmall;
                 double pcnt = 10.0;
