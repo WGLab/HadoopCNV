@@ -12,7 +12,10 @@ import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.ArrayPrimitiveWritable;
+import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapreduce.lib.output.MultipleOutputs;
 
 /**
  * Placeholder class for the Reducers. Currently no functionality here.
@@ -39,6 +42,7 @@ class BinReducer
     private final List<Integer> hetList = new ArrayList<>();
     private final double[] mse_states = new double[6];
 
+    
     /**
      * @param inkey A composite key consisting of Chromosome and Bin ID (first
      * base pair position of the bin)
@@ -265,6 +269,44 @@ class CnvReducer
 //      //System.err.println("REDUCER: "+inkey.toString()+": "+sum);
 //    }
 //}
+class SRPEReducer
+      extends Reducer<RefBinKey, Text, NullWritable, Text>{
+      private Text output = new Text();
+      private MultipleOutputs mos;
+      public void setup(Context context){
+      	mos = new MultipleOutputs(context);
+      }
+      public SRPEReducer() {
+          
+      }
+      public void cleanup(Context context) throws InterruptedException, IOException{
+    	  mos.close();
+    	  return;
+      }
+      /**
+       * 
+       */
+      @Override
+      protected void reduce(RefBinKey inkey, Iterable<Text> invals, Reducer<RefBinKey, Text, NullWritable, Text>.Context ctx)
+              throws InterruptedException, IOException {
+             Iterator<Text> it = invals.iterator();
+             NullWritable key = NullWritable.get();
+             while(it.hasNext()){
+            	 String samstr = it.next().toString();
+            	 String results[] = samstr.split("\t", 2);
+            	 if (results[0].equals("SR")){
+            		 mos.write("sr",  key, new Text(results[1]) );
+            	 }
+            	 if (results[0].equals("PE")){
+            		 mos.write("pe", key, new Text(results[1]) );
+            	 } 
+             }
+             return;
+      }
+      
+}	
+
+
 /**
  * A reducer class for efficiently computing the quality score weighted depth
  * counts for each base in a read view.

@@ -70,7 +70,15 @@ public class UserConfig {
     public static boolean getRunCnvCaller() {
         return Boolean.parseBoolean(getConfig("RUN_CNV_CALLER"));
     }
+    
+    /**
+     * @return Whether to run the split-read  read extracter
+     */
+    public static boolean getRun_SR_PE_Extracter(){
+    	return Boolean.parseBoolean(getConfig("RUN_SR_PE_EXTRACTER"));
+    }
 
+    
     /**
      * @return Should we run the global sort component? This sorts the depth
      * calls over all bases.

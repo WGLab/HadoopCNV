@@ -11,6 +11,7 @@ import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.mapreduce.lib.partition.InputSampler;
 import org.apache.hadoop.mapreduce.lib.partition.HashPartitioner;
 import org.apache.hadoop.mapreduce.lib.partition.TotalOrderPartitioner;
@@ -20,9 +21,12 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.DoubleWritable;
+import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.ArrayPrimitiveWritable;
+import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.mapreduce.lib.output.MultipleOutputs;
 import org.seqdoop.hadoop_bam.AnySAMInputFormat;
 
 /**
@@ -85,6 +89,7 @@ public class PennCnvSeq extends Configured implements Tool {
             this.bamfileStr = UserConfig.getBamFile();
             File bamFile = new File(bamfileStr);
             String subFolderName = bamFile.getName().substring(0, bamFile.getName().lastIndexOf("."));
+            String SRPEFolder = "workdir" + File.separator + "sr_pe" + File.separator + subFolderName;
             String depthFolder = "workdir" + java.io.File.separator + "depth" + java.io.File.separator + subFolderName;
             String sortedFolder = "workdir" + java.io.File.separator + "sorted" + java.io.File.separator + subFolderName;
             String partitioningFolder = "workdir" + java.io.File.separator + "partitioning" + java.io.File.separator + subFolderName;
@@ -97,7 +102,7 @@ public class PennCnvSeq extends Configured implements Tool {
 //                        + " binsFolder: " + binsFolder + " cnvFolder: " + cnvFolder);
 //            }
 //            System.exit(0);
-//
+            //Get all the configurations 
             float abberation_penalty = UserConfig.getAbberationPenalty();
         	float transition_penalty = UserConfig.getTransitionPenalty(); 
             int numReduceTasksBig = UserConfig.getBamFileReducers();
@@ -107,6 +112,8 @@ public class PennCnvSeq extends Configured implements Tool {
             boolean runRegionBinJob = UserConfig.getRunBinner();
             boolean runCnvCallJob = UserConfig.getRunCnvCaller();
             boolean runGlobalSortJob = UserConfig.getRunGlobalSort();
+            boolean runSR_PE_ExtractionJob = UserConfig.getRun_SR_PE_Extracter();
+            
             int numRecudeTasks = UserConfig.getReducerTasks();
             System.err.println("L1: "+UserConfig.getAbberationPenalty() );
             System.err.println("L2: "+UserConfig.getTransitionPenalty() );
@@ -121,6 +128,46 @@ public class PennCnvSeq extends Configured implements Tool {
             }
 
             fileSystem = FileSystem.get(conf);
+            if(runSR_PE_ExtractionJob){
+                this.bamfile = new Path(bamfileStr);
+
+                Job SRPEJob = Job.getInstance(conf, "SR PE extracter");
+                SRPEJob.setJobName("sr_pe_Extracter");
+                SRPEJob.setNumReduceTasks(1);
+                SRPEJob.setInputFormatClass(AnySAMInputFormat.class);
+                SRPEJob.setJarByClass(PennCnvSeq.class);
+                
+                SRPEJob.setMapperClass(SRPEReadMapper.class);
+                SRPEJob.setMapOutputKeyClass(RefBinKey.class);
+                SRPEJob.setMapOutputValueClass(Text.class);
+               
+                SRPEJob.setReducerClass(SRPEReducer.class);
+                SRPEJob.setOutputKeyClass(NullWritable.class);
+                SRPEJob.setOutputValueClass(Text.class);
+                //InputSampler.Sampler<String, String> sampler = new InputSampler.RandomSampler<>(pcnt, numSamples, maxSplits);
+                
+                //SRPEJob.setPartitionerClass(TotalOrderPartitioner.class);
+                
+                //Delete the  directory before processing it
+                FileInputFormat.addInputPath(SRPEJob, bamfile);
+                fileSystem.delete(new Path(SRPEFolder), true);
+                FileOutputFormat.setOutputPath(SRPEJob, new Path(SRPEFolder));
+                
+                MultipleOutputs.addNamedOutput(SRPEJob, "sr", TextOutputFormat.class, NullWritable.class, Text.class);
+                MultipleOutputs.addNamedOutput(SRPEJob, "pe", TextOutputFormat.class, NullWritable.class, Text.class);
+                
+                //TotalOrderPartitioner.setPartitionFile(SRPEJob.getConfiguration(), new Path("workdir/partitioning"));
+                //InputSampler.writePartitionFile(SRPEJob, sampler);
+                
+                System.out.println("Submitting SR_PE caller.");
+                if (!SRPEJob.waitForCompletion(true)) {
+                    System.out.println("Global sort failed.");
+                    return 1;
+                }
+                
+            }
+
+            
             if (runDepthCallJob) {
                 //conf.setInt("dfs.blocksize",512*1024*1024);
                 //conf.set("yarn.scheduler.minimum-allocation-mb",UserConfig.getYarnContainerMinMb());

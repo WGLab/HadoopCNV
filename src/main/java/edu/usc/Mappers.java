@@ -82,6 +82,51 @@ class BinSortMapper
 }
 
 /**
+ * This is the mapper to retrieve all the split reads
+ *
+ * @see Constants This version is considerably faster than the naive version of
+ * the Depth Caller.
+ */
+class SRPEReadMapper extends Mapper<LongWritable, SAMRecordWritable, RefBinKey, Text> {
+
+    private RefBinKey refBinKey = null;
+    private Text text = null;
+
+    public SRPEReadMapper() {
+        refBinKey = new RefBinKey();
+        text = new Text();
+    }
+    
+    @Override
+    protected void map(LongWritable inkey, SAMRecordWritable inval,
+            Mapper<LongWritable, SAMRecordWritable, RefBinKey, Text>.Context ctx)
+            throws InterruptedException, IOException {
+                SAMRecord samrecord = inval.get();
+                String refname = samrecord.getReferenceName();
+                Pattern p = Pattern.compile("^chr");
+                Matcher m = p.matcher(refname);
+                if(!m.lookingAt()) {
+                	refname = "chr" + refname;
+                }
+                refBinKey.setRefName(refname);
+                String samstr = samrecord.getSAMString();
+                int start = samrecord.getAlignmentStart();
+                refBinKey.setBin(start);
+                String SA = samrecord.getStringAttribute("SA");
+                int flag = samrecord.getFlags();
+                if ( (flag & 1294) != 0) {
+                	ctx.write(refBinKey, new Text("PE\t" + samstr) );
+                }
+                if (SA != null){
+                	ctx.write(refBinKey, new Text("SR\t" + samstr) );
+                }
+                return;
+        
+    }
+}
+
+
+/**
  * This is the Mapper of the Depth Caller that uses a fixed length view of the
  * reads that overlap within the range of the view. To set the view width
  * configure this value in the Constants.java
@@ -95,7 +140,7 @@ class SAMRecordWindowMapper extends Mapper<LongWritable, SAMRecordWritable, RefB
     private ArrayPrimitiveWritable arrayPrimitiveWritable = null;
     private final int bin_size = Constants.read_bin_width;
     private byte[] read_info = null;
-
+    
     public SAMRecordWindowMapper() {
         refBinKey = new RefBinKey();
         arrayPrimitiveWritable = new ArrayPrimitiveWritable();

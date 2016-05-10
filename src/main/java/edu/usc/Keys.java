@@ -177,6 +177,10 @@ class RefPosBaseKey implements
     }
 }
 
+/*   @param  refname  The chromosome name
+ *   @param  bin      The first base pair position of that key
+
+*/
 class RefBinKey implements
         WritableComparable<RefBinKey> {
 
