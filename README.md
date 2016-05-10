@@ -41,12 +41,12 @@ For example, if your file is called 'NA12878.chrom\*.ILLUMINA.bwa.CEU.high_cover
 
 First put all fasta files of a specific genome into a folder `./fasta`
 
-Then run this script by `python preprocessBAM.py <prefix> ./fasta`. A SAM file will be generated as '<prefix>.extra.sam'.
+Then run this script by `python preprocessBAM.py <prefix> ./fasta`. A SAM file will be generated as '\<prefix\>.extra.sam'.
 Then use [Samtools](http://www.htslib.org/) to transform it to BAM file by: 
 
 `samtools -t fasta/chrall.fa.fai <prefix>.extra.sam > NA12878.chrom.ILLUMINA.bwa.CEU.high_coverage.20100311.bam.extra`
 
-NOTICE: <prefix> can be any name you give to the file. 'fasta/chrall.fa.fai' is the fasta index associated with all chromosomes. 
+NOTICE: \<prefix\> can be any name you give to the file. 'fasta/chrall.fa.fai' is the fasta index associated with all chromosomes. 
 
 If you don't have this file in your './fasta' dir, please first concatenate all fasta files into one:
 
@@ -71,6 +71,41 @@ For example, my NA12878 BAM file name is in the 'NA12878.chrom\*.ILLUMINA.bwa.CE
 In case you want to change anything, the only parameters you should play with are 'ABBERATION_PENALTY' and 'TRANSITION_PENALTY'. Increase 'ABBERATION_PENALTY' to make CNV calls more stringent. Increase 'TRANSITION_PENALTY' to make only longer calls to be considered.
 
 #### 3) After all above is done, just run by `./run.sh`
+
+This example will generate a CNV inference file called `results.txt`.
+
+The output of the CNV inference file may look something like
+
+```
+[kaiwang@compute-0-0 results]$ head results.txt 
+chr15   20000007        20000099        -0.6997057      2       2       0.0     0.0     0.0     0.0     0.0     0.0
+chr15   20000100        20000199        -0.39941147     2       2       0.0     0.0     0.0     0.0     0.0     0.0
+chr15   20000200        20000299        -0.14916627     2       2       0.0     0.0     0.0     0.0     0.0     0.0
+chr15   20000300        20000399        9.808615E-4     2       2       0.0     0.0     0.0     0.0     0.0     0.0
+chr15   20000400        20000499        0.051029906     2       2       0.0     0.0     0.0     0.0     0.0     0.0
+chr15   20000500        20000599        9.808615E-4     2       2       0.0     0.0     0.0     0.0     0.0     0.0
+chr15   20000600        20000699        0.10107895      2       2       0.0     0.0     0.0     0.0     0.0     0.0
+```
+
+The columns are interpreted as chromosome name, start base for the bin, end base for the bin, median depth count (normalized to [-1.0,1.0]), HMM state (0=total deletion,1=single deletion,2=copy neutral LOH,3=normal,4=single copy amplification, 5 = double copy amplification), copy number, MSE_BAF_0, MSE_BAF_1, MSE_BAF_2, MSE_BAF_3, MSE_BAF_4, MSE_BAF_5. For more information regarding the last four fields, please refer to our manuscript. Briefly, these are mean squared errors for each of the four states conditional on the BAF model for that state. Lower values signify a better fit for that particular state's hypothesis.
+
+Then run
+```
+perl compile_penncnv3.pl < results.txt > out.cnv
+```
+to generate the final output CNV file, which looks like:
+```
+deletion	chr15:21101500-21299999	CN:1
+deletion	chr15:25309100-25337899	CN:1
+deletion	chr15:27340000-27340999	CN:1
+deletion	chr15:28342100-28360899	CN:1
+deletion	chr15:33022100-33520999	CN:1
+deletion	chr15:37597000-37605899	CN:1
+deletion	chr15:40612700-40613899	CN:1
+
+```
+
+The first column indicates the type of CNVs (deletion, duplication or loh), the second column is in "chromosome:start-end" format, the third column indicates the copy number.
 
 #### 4) To run many samples in a sequencial pipeline, please see our example `run_all.pl`. The idea is to use `sed` to change parameters each time.
 
