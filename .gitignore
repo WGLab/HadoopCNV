@@ -5,5 +5,5 @@ example/*
 !example/hg19.extra.bam
 !example/preprocessBAM.py
 !example/run_all.pl
-resource/
+resource/lumpy-sv
 target/
