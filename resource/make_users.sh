@@ -1,8 +1,8 @@
 USERS=('huiyang' 'hadoop')
-hdfs dfs -mkdir /home
+hdfs dfs -mkdir /user
 for user in "${USERS[@]}"
 do
-    hdfs dfs -mkdir /home/$user
+    hdfs dfs -mkdir /user/$user
 done
 
 

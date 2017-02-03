@@ -1,15 +1,15 @@
 # it is assumed that this file exists on HDFS already
 # File name must have a dot inside
-BAM_FILE: /bamfiles/child_hg19_SVs_v2_chr21.sort.bam
+BAM_FILE: /bamfiles/child_hg19_SVs_v2.sort.bam
 # this is the local path to the corresponding VCF. Change accordingly.
-VCF_FILE: VCF/cov20_loh.vcf
+VCF_FILE: VCF/cov40.vcf
 # following are the pipeline components that should be run.
-RUN_DEPTH_CALLER: false
+RUN_DEPTH_CALLER: true
 RUN_GLOBAL_SORT: false
-INIT_VCF_LOOKUP: false
-RUN_BINNER: false
-RUN_CNV_CALLER: false
-RUN_SR_PE_EXTRACTER: true
+INIT_VCF_LOOKUP: true
+RUN_BINNER: true
+RUN_CNV_CALLER: true
+RUN_SR_PE_EXTRACTER: false
 # We want the number of BAM file reducers to be approximately equal
 # to the number of mappers (which is a function of the BAM file size).
 # e.g. 800
