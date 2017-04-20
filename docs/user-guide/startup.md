@@ -1,6 +1,6 @@
 # Get Hadoop set up
 
-Maven is the preferred compilation tool for Hadoop, Hadoop-BAM, and PennCNV3. Please visit https://maven.apache.org/ if you do not already have Maven installed. Maven facilitates the building of projects by automatically resolving dependencies to other projects, and building these dependencies first.
+Maven is the preferred compilation tool for Hadoop, Hadoop-BAM, and HadoopCNV. Please visit https://maven.apache.org/ if you do not already have Maven installed. Maven facilitates the building of projects by automatically resolving dependencies to other projects, and building these dependencies first.
 
 You will want to install Hadoop on your cluster if you have not done so already. More information can be found here:
 
