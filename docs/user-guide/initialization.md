@@ -136,7 +136,7 @@ You can kill a job with
 yarn application -kill <jobid>
 ```
 
-##Debug
+## Debug
 
 Bugs always occur because of the settings in XML files in `$HADOOP_CONF_DIR`.
 
