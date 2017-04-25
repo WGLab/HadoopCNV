@@ -115,7 +115,7 @@ The first column indicates the type of CNVs (deletion, duplication or loh), the 
 
 ## Reference
 
-Yang H, Chen G, Lima L, Fang H, Jimenez L, Li M, Lyon GJ, He M, Wang K. HadoopCNV: A dynamic programming imputation algorithm to detect copy number variants from sequencing data
+Yang H, Chen G, Lima L, Fang H, Jimenez L, Li M, Lyon GJ, He M, Wang K. [HadoopCNV: A dynamic programming imputation algorithm to detect copy number variants from sequencing data](http://biorxiv.org/content/early/2017/04/05/124339), doi: https://doi.org/10.1101/124339, 2017
 
 ## License
 
